@@ -1,3 +1,9 @@
+
+## [3.0.4] - 2026-05-29
+
+### Fixed
+- Fixed plugin auto updated and few other bugs.
+
 ## [3.0.3] - 2026-05-16
 
 ### Fixed
