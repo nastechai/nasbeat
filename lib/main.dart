@@ -63,6 +63,7 @@ import 'package:Bloomee/screens/widgets/onboarding_overlay.dart';
 import 'package:Bloomee/screens/widgets/plugin_bootstrap_overlay.dart';
 import 'package:Bloomee/services/onboarding_service.dart';
 import 'package:Bloomee/services/plugin_bootstrap_service.dart';
+import 'package:Bloomee/plugins/services/plugin_repository_service.dart';
 import 'package:Bloomee/services/shared_url_resolver_service.dart';
 
 void processIncomingIntent(SharedMedia sharedMedia) {
@@ -207,6 +208,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       unawaited(_ensurePlayerHealthyOnResume());
+      // Check for plugin updates when app resumes (30-min cooldown enforced).
+      unawaited(_checkPluginUpdatesOnResume());
     }
   }
 
@@ -219,6 +222,21 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       player.syncPublicState();
     } catch (error, stackTrace) {
       debugPrint('Player health check on resume failed: $error\n$stackTrace');
+    }
+  }
+
+  Future<void> _checkPluginUpdatesOnResume() async {
+    try {
+      final settingsDao = SettingsDAO(DBProvider.db);
+      final repositoryService =
+          PluginRepositoryService(settingsDao: settingsDao);
+      await PluginBootstrapService.syncOnAppOpenIfDue(
+        pluginService: ServiceLocator.pluginService,
+        repositoryService: repositoryService,
+        settingsDao: settingsDao,
+      );
+    } catch (error, stackTrace) {
+      debugPrint('Plugin update check on resume failed: $error\n$stackTrace');
     }
   }
 
@@ -319,6 +337,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           create: (context) => PluginBloc(
             pluginService: ServiceLocator.pluginService,
             eventBus: ServiceLocator.pluginEventBus,
+            repositoryService: ServiceLocator.pluginRepositoryService,
+            settingsDao: SettingsDAO(DBProvider.db),
           )..add(const InitializePluginSystem()),
           lazy: false,
         ),
