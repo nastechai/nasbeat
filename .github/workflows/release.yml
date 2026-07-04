@@ -51,12 +51,10 @@ jobs:
           $b64 = "${{ secrets.KEY_STORE }}"
           [IO.File]::WriteAllBytes("./android/nasbeat.jks", [Convert]::FromBase64String($b64))
 
-          @"
-storeFile=nasbeat.jks
-keyPassword=${{ secrets.KEY_PASSWORD }}
-storePassword=${{ secrets.STORE_PASSWORD }}
-keyAlias=${{ secrets.KEY_ALIAS }}
-"@ | Set-Content ./android/key.properties
+          Set-Content -Path ./android/key.properties -Value "storeFile=nasbeat.jks"
+          Add-Content -Path ./android/key.properties -Value "keyPassword=${{ secrets.KEY_PASSWORD }}"
+          Add-Content -Path ./android/key.properties -Value "storePassword=${{ secrets.STORE_PASSWORD }}"
+          Add-Content -Path ./android/key.properties -Value "keyAlias=${{ secrets.KEY_ALIAS }}"
 
       - name: Build APKs
         run: flutter build apk --release --split-per-abi --build-number ${{ github.run_number }}
