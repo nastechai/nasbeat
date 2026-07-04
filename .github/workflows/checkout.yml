@@ -16,13 +16,13 @@ on:
 
 jobs:
   # ==========================================
-  # JOB 1: FLUTTER CHECKS
+  # FLUTTER CHECKS
   # ==========================================
-  flutter-check:
-    name: Flutter Analyze & Test
-    runs-on: ubuntu-latest 
+  flutter:
+    name: Flutter (Analyze, Format, Test)
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Flutter
@@ -32,32 +32,50 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: flutter pub get
 
-      - name: Static Code Analysis
+      - name: Format check
+        run: flutter format --set-exit-if-changed --dry-run .
+
+      - name: Static analysis
         run: flutter analyze --no-fatal-infos
 
+      - name: Run tests
+        run: flutter test --coverage
+
+      - name: Upload coverage (optional)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flutter-coverage
+          path: coverage/
 
   # ==========================================
-  # JOB 2: RUST CHECKS (flutter_rust_bridge)
+  # RUST CHECKS
   # ==========================================
-  rust-check:
-    name: Rust Clippy & Test
+  rust:
+    name: Rust (Clippy, Format, Test)
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Rust Toolchain
+      - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
 
-      - name: Cache Rust Dependencies
+      - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: "rust" 
+          workspaces: "rust"
 
-      - name: Run Cargo check
-        run: cargo check --manifest-path rust/Cargo.toml
+      - name: Format check
+        run: cargo fmt --manifest-path rust/Cargo.toml -- --check
+
+      - name: Clippy lint
+        run: cargo clippy --manifest-path rust/Cargo.toml -- -D warnings
+
+      - name: Run tests
+        run: cargo test --manifest-path rust/Cargo.toml
