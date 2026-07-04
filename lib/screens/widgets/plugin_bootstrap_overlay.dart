@@ -3,13 +3,13 @@ library;
 import 'dart:io' show Platform, exit;
 import 'dart:ui';
 
-import 'package:Bloomee/core/di/service_locator.dart';
-import 'package:Bloomee/core/theme/app_theme.dart';
-import 'package:Bloomee/l10n/app_localizations.dart';
-import 'package:Bloomee/plugins/services/plugin_repository_service.dart';
-import 'package:Bloomee/services/db/dao/settings_dao.dart';
-import 'package:Bloomee/services/db/db_provider.dart';
-import 'package:Bloomee/services/plugin_bootstrap_service.dart';
+import 'package:nasbeat/core/di/service_locator.dart';
+import 'package:nasbeat/core/theme/app_theme.dart';
+import 'package:nasbeat/l10n/app_localizations.dart';
+import 'package:nasbeat/plugins/services/plugin_repository_service.dart';
+import 'package:nasbeat/services/db/dao/settings_dao.dart';
+import 'package:nasbeat/services/db/db_provider.dart';
+import 'package:nasbeat/services/plugin_bootstrap_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
@@ -222,7 +222,7 @@ class _SpinnerBody extends StatelessWidget {
           ),
           const SizedBox(height: 32),
           Text(
-            l10n?.pluginBootstrapTitle ?? 'Setting up Bloomee',
+            l10n?.pluginBootstrapTitle ?? 'Setting up NasBeat',
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: Colors.white,
@@ -393,7 +393,7 @@ class _NoInternetBody extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              'Bloomee needs an internet connection once to detect your country and set up the plugin engine.',
+              'NasBeat needs an internet connection once to detect your country and set up the plugin engine.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.62),

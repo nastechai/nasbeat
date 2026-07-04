@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
-import 'package:Bloomee/core/constants/setting_keys.dart';
-import 'package:Bloomee/services/db/db_provider.dart';
-import 'package:Bloomee/services/db/dao/settings_dao.dart';
+import 'package:nasbeat/core/constants/setting_keys.dart';
+import 'package:nasbeat/services/db/db_provider.dart';
+import 'package:nasbeat/services/db/dao/settings_dao.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -60,7 +60,7 @@ Future<Map<String, dynamic>> sourceforgeUpdate(
     // normalize unknowns to win for SourceForge naming
     platform = 'win';
   }
-  const url = 'https://sourceforge.net/projects/bloomee/best_release.json';
+  const url = 'https://sourceforge.net/projects/nasbeat/best_release.json';
   final userAgent = {
     'win':
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
@@ -167,7 +167,7 @@ Future<Map<String, dynamic>> sourceforgeUpdate(
 Future<Map<String, dynamic>> githubUpdate(
     {Duration timeout = const Duration(seconds: 6)}) async {
   final url =
-      'https://api.github.com/repos/HemantKArya/BloomeeTunes/releases/latest';
+      'https://api.github.com/repos/nastechai/nasbeat/releases/latest';
   PackageInfo packageInfo = await PackageInfo.fromPlatform();
   try {
     final response = await http.get(Uri.parse(url)).timeout(timeout);
@@ -277,7 +277,7 @@ Future<Map<String, dynamic>> getAppUpdates() async {
 Future<String?> fetchChangelog(
     {Duration timeout = const Duration(seconds: 6)}) async {
   const changelogUrl =
-      'https://hemantkarya.github.io/BloomeeTunes/CHANGELOG.md';
+      'https://nasbeat.nastechai.com/CHANGELOG.md';
   try {
     final response = await http.get(Uri.parse(changelogUrl)).timeout(timeout);
     if (response.statusCode == 200) {

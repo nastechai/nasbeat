@@ -1,18 +1,18 @@
 import 'dart:developer';
 
-import 'package:Bloomee/blocs/media_player/bloomee_player_cubit.dart';
-import 'package:Bloomee/blocs/downloader/cubit/downloader_cubit.dart';
-import 'package:Bloomee/core/models/media_playlist_model.dart';
-import 'package:Bloomee/core/models/exported.dart';
-import 'package:Bloomee/screens/widgets/downloading_item.dart';
-import 'package:Bloomee/screens/widgets/more_bottom_sheet.dart';
-import 'package:Bloomee/screens/widgets/sign_board_widget.dart';
-import 'package:Bloomee/screens/widgets/snackbar.dart';
-import 'package:Bloomee/screens/widgets/song_tile.dart';
+import 'package:nasbeat/blocs/media_player/nasbeat_player_cubit.dart';
+import 'package:nasbeat/blocs/downloader/cubit/downloader_cubit.dart';
+import 'package:nasbeat/core/models/media_playlist_model.dart';
+import 'package:nasbeat/core/models/exported.dart';
+import 'package:nasbeat/screens/widgets/downloading_item.dart';
+import 'package:nasbeat/screens/widgets/more_bottom_sheet.dart';
+import 'package:nasbeat/screens/widgets/sign_board_widget.dart';
+import 'package:nasbeat/screens/widgets/snackbar.dart';
+import 'package:nasbeat/screens/widgets/song_tile.dart';
 import 'package:flutter/material.dart';
-import 'package:Bloomee/core/theme/app_theme.dart';
+import 'package:nasbeat/core/theme/app_theme.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:Bloomee/l10n/app_localizations.dart';
+import 'package:nasbeat/l10n/app_localizations.dart';
 import 'package:icons_plus/icons_plus.dart';
 
 class OfflineScreen extends StatefulWidget {
@@ -118,8 +118,8 @@ class _OfflineScreenState extends State<OfflineScreen> {
 
                                 try {
                                   context
-                                      .read<BloomeePlayerCubit>()
-                                      .bloomeePlayer
+                                      .read<NasBeatPlayerCubit>()
+                                      .nasbeatPlayer
                                       .loadPlaylist(
                                         Playlist(
                                           tracks: state.downloaded,

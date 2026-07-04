@@ -1,6 +1,6 @@
 ﻿import 'dart:developer';
 
-import 'package:Bloomee/services/db/global_db.dart';
+import 'package:nasbeat/services/db/global_db.dart';
 import 'package:isar_community/isar.dart';
 
 /// DAO for API response cache (TTL-aware) and API token storage.

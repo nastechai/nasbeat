@@ -6,28 +6,28 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:icons_plus/icons_plus.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:Bloomee/blocs/settings_cubit/cubit/settings_cubit.dart';
-import 'package:Bloomee/blocs/media_player/bloomee_player_cubit.dart';
-import 'package:Bloomee/blocs/search_suggestions/search_suggestion_bloc.dart';
-import 'package:Bloomee/blocs/internet_connectivity/cubit/connectivity_cubit.dart';
-import 'package:Bloomee/core/di/service_locator.dart';
-import 'package:Bloomee/core/models/exported.dart';
-import 'package:Bloomee/core/theme/app_theme.dart';
-import 'package:Bloomee/l10n/app_localizations.dart';
-import 'package:Bloomee/plugins/blocs/content/content_bloc.dart';
-import 'package:Bloomee/plugins/blocs/content/content_event.dart';
-import 'package:Bloomee/plugins/blocs/content/content_state.dart';
-import 'package:Bloomee/plugins/blocs/plugin/plugin_bloc.dart';
-import 'package:Bloomee/plugins/blocs/plugin/plugin_state.dart';
-import 'package:Bloomee/screens/widgets/album_card.dart';
-import 'package:Bloomee/screens/widgets/artist_card.dart';
-import 'package:Bloomee/screens/widgets/more_bottom_sheet.dart';
-import 'package:Bloomee/screens/widgets/playlist_card.dart';
-import 'package:Bloomee/screens/widgets/sign_board_widget.dart';
-import 'package:Bloomee/screens/widgets/song_tile.dart';
-import 'package:Bloomee/src/rust/api/plugin/commands.dart';
-import 'package:Bloomee/src/rust/api/plugin/plugin_info.dart';
-import 'package:Bloomee/src/rust/api/plugin/models.dart' as plugin_models;
+import 'package:nasbeat/blocs/settings_cubit/cubit/settings_cubit.dart';
+import 'package:nasbeat/blocs/media_player/nasbeat_player_cubit.dart';
+import 'package:nasbeat/blocs/search_suggestions/search_suggestion_bloc.dart';
+import 'package:nasbeat/blocs/internet_connectivity/cubit/connectivity_cubit.dart';
+import 'package:nasbeat/core/di/service_locator.dart';
+import 'package:nasbeat/core/models/exported.dart';
+import 'package:nasbeat/core/theme/app_theme.dart';
+import 'package:nasbeat/l10n/app_localizations.dart';
+import 'package:nasbeat/plugins/blocs/content/content_bloc.dart';
+import 'package:nasbeat/plugins/blocs/content/content_event.dart';
+import 'package:nasbeat/plugins/blocs/content/content_state.dart';
+import 'package:nasbeat/plugins/blocs/plugin/plugin_bloc.dart';
+import 'package:nasbeat/plugins/blocs/plugin/plugin_state.dart';
+import 'package:nasbeat/screens/widgets/album_card.dart';
+import 'package:nasbeat/screens/widgets/artist_card.dart';
+import 'package:nasbeat/screens/widgets/more_bottom_sheet.dart';
+import 'package:nasbeat/screens/widgets/playlist_card.dart';
+import 'package:nasbeat/screens/widgets/sign_board_widget.dart';
+import 'package:nasbeat/screens/widgets/song_tile.dart';
+import 'package:nasbeat/src/rust/api/plugin/commands.dart';
+import 'package:nasbeat/src/rust/api/plugin/plugin_info.dart';
+import 'package:nasbeat/src/rust/api/plugin/models.dart' as plugin_models;
 
 class SearchScreen extends StatefulWidget {
   final String searchQuery;
@@ -1299,8 +1299,8 @@ class _SliverSearchResults extends StatelessWidget {
                     child: SongCardWidget(
                       song: track,
                       onTap: () => context
-                          .read<BloomeePlayerCubit>()
-                          .bloomeePlayer
+                          .read<NasBeatPlayerCubit>()
+                          .nasbeatPlayer
                           .updateQueueTracks([track], doPlay: true),
                       onOptionsTap: () => showMoreBottomSheet(context, track,
                           showSinglePlay: true),

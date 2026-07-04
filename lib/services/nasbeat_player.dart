@@ -2,33 +2,33 @@ import 'dart:developer';
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:Bloomee/core/adapters/track_adapter.dart';
-import 'package:Bloomee/core/models/exported.dart' hide MediaItem;
-import 'package:Bloomee/core/models/media_playlist_model.dart';
-import 'package:Bloomee/core/constants/sentinel_values.dart';
-import 'package:Bloomee/core/constants/setting_keys.dart';
-import 'package:Bloomee/core/di/service_locator.dart';
-import 'package:Bloomee/plugins/utils/media_id.dart';
-import 'package:Bloomee/plugins/errors/plugin_exceptions.dart';
-import 'package:Bloomee/screens/widgets/snackbar.dart';
-import 'package:Bloomee/services/db/db_provider.dart';
-import 'package:Bloomee/services/db/dao/settings_dao.dart';
-import 'package:Bloomee/services/player/media_resolver_service.dart';
-import 'package:Bloomee/services/player/player_engine.dart';
-import 'package:Bloomee/services/player/player_error_handler.dart';
-import 'package:Bloomee/services/player/queue_manager.dart';
-import 'package:Bloomee/services/player/related_songs_manager.dart';
-import 'package:Bloomee/services/player/recently_played_tracker.dart';
-import 'package:Bloomee/services/plugin/plugin_service.dart';
-import 'package:Bloomee/services/meta_resolver/smart_track_replacement_service.dart';
-import 'package:Bloomee/services/discord_service.dart';
+import 'package:nasbeat/core/adapters/track_adapter.dart';
+import 'package:nasbeat/core/models/exported.dart' hide MediaItem;
+import 'package:nasbeat/core/models/media_playlist_model.dart';
+import 'package:nasbeat/core/constants/sentinel_values.dart';
+import 'package:nasbeat/core/constants/setting_keys.dart';
+import 'package:nasbeat/core/di/service_locator.dart';
+import 'package:nasbeat/plugins/utils/media_id.dart';
+import 'package:nasbeat/plugins/errors/plugin_exceptions.dart';
+import 'package:nasbeat/screens/widgets/snackbar.dart';
+import 'package:nasbeat/services/db/db_provider.dart';
+import 'package:nasbeat/services/db/dao/settings_dao.dart';
+import 'package:nasbeat/services/player/media_resolver_service.dart';
+import 'package:nasbeat/services/player/player_engine.dart';
+import 'package:nasbeat/services/player/player_error_handler.dart';
+import 'package:nasbeat/services/player/queue_manager.dart';
+import 'package:nasbeat/services/player/related_songs_manager.dart';
+import 'package:nasbeat/services/player/recently_played_tracker.dart';
+import 'package:nasbeat/services/plugin/plugin_service.dart';
+import 'package:nasbeat/services/meta_resolver/smart_track_replacement_service.dart';
+import 'package:nasbeat/services/discord_service.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:async/async.dart';
 import 'package:easy_debounce/easy_throttle.dart';
 import 'package:rxdart/rxdart.dart';
 
-/// BloomeeTunes main audio player.
+/// NasBeat main audio player.
 ///
 /// Extends [BaseAudioHandler] so the OS MediaSession contract is satisfied:
 /// the notification, headset buttons, lock screen, and Android Auto all work
@@ -50,7 +50,7 @@ import 'package:rxdart/rxdart.dart';
 /// ## Concurrency
 /// All play/resolve operations use [CancelableCompleter] / [CancelableOperation]
 /// so that rapid track skipping never leaves orphaned network requests.
-class BloomeeMusicPlayer extends BaseAudioHandler
+class NasBeatMusicPlayer extends BaseAudioHandler
     with SeekHandler, QueueHandler {
   late PlayerEngine engine;
 
@@ -119,7 +119,7 @@ class BloomeeMusicPlayer extends BaseAudioHandler
 
   // ─── Constructor ───────────────────────────────────────────────────────────
 
-  BloomeeMusicPlayer() {
+  NasBeatMusicPlayer() {
     _initEngine();
     _initModules();
     _initSubscriptions();
@@ -147,7 +147,7 @@ class BloomeeMusicPlayer extends BaseAudioHandler
         }
       }
     } catch (e) {
-      log('Session restore failed: $e', name: 'BloomeeMusicPlayer');
+      log('Session restore failed: $e', name: 'NasBeatMusicPlayer');
     }
   }
 
@@ -245,7 +245,7 @@ class BloomeeMusicPlayer extends BaseAudioHandler
     _activateAudioSession().then((granted) {
       if (granted && !_isDisposed) engine.play();
     }).catchError((Object e) {
-      log('Resume after interruption failed: $e', name: 'BloomeeMusicPlayer');
+      log('Resume after interruption failed: $e', name: 'NasBeatMusicPlayer');
     });
   }
 
@@ -261,7 +261,7 @@ class BloomeeMusicPlayer extends BaseAudioHandler
       _audioSession = session;
       return await session.setActive(true);
     } catch (e) {
-      log('setActive(true) failed: $e', name: 'BloomeeMusicPlayer');
+      log('setActive(true) failed: $e', name: 'NasBeatMusicPlayer');
       return false;
     }
   }
@@ -304,7 +304,7 @@ class BloomeeMusicPlayer extends BaseAudioHandler
       final eqOn = await dao.getSettingBool(SettingKeys.eqEnabled) ?? false;
       await engine.setEqualizerEnabled(eqOn);
     } catch (e) {
-      log('restoreEngineSettings failed: $e', name: 'BloomeeMusicPlayer');
+      log('restoreEngineSettings failed: $e', name: 'NasBeatMusicPlayer');
     }
   }
 
@@ -371,7 +371,7 @@ class BloomeeMusicPlayer extends BaseAudioHandler
     _completionSub = engine.completionStream.listen((_) => _onTrackCompleted());
 
     _errorSub = engine.errorStream.listen((error) {
-      log('Engine error: $error', name: 'BloomeeMusicPlayer');
+      log('Engine error: $error', name: 'NasBeatMusicPlayer');
       final track = _queueManager.currentTrack;
       if (track != null) {
         _errorHandler.handleError(PlayerErrorType.playbackError, error, track);
@@ -560,7 +560,7 @@ class BloomeeMusicPlayer extends BaseAudioHandler
     final prev = _playCompleter;
     final completer = CancelableCompleter<void>(
       onCancel: () => log('Track load cancelled: ${track.title}',
-          name: 'BloomeeMusicPlayer'),
+          name: 'NasBeatMusicPlayer'),
     );
     _playCompleter = completer;
     prev?.operation.cancel();
@@ -665,7 +665,7 @@ class BloomeeMusicPlayer extends BaseAudioHandler
       isResolving.add(false);
       if (!alive()) return;
       log('Play failed: ${track.title}: $e',
-          name: 'BloomeeMusicPlayer', stackTrace: stack);
+          name: 'NasBeatMusicPlayer', stackTrace: stack);
       _errorHandler.handleError(
           _errorHandler.categorizeError(e), e.toString(), resolvedTrack, e);
       complete();
@@ -813,7 +813,7 @@ class BloomeeMusicPlayer extends BaseAudioHandler
   /// underlying audio service (e.g. memory pressure, OEM task killers).
   Future<void> revive() async {
     if (!_isDisposed && isPlayerHealthy) return;
-    log('Reviving BloomeeMusicPlayer...', name: 'BloomeeMusicPlayer');
+    log('Reviving NasBeatMusicPlayer...', name: 'NasBeatMusicPlayer');
 
     // Save position before engine teardown (M-12).
     try {

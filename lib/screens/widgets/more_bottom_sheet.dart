@@ -7,18 +7,18 @@ import 'package:icons_plus/icons_plus.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:Bloomee/blocs/add_to_playlist/cubit/add_to_playlist_cubit.dart';
-import 'package:Bloomee/blocs/downloader/cubit/downloader_cubit.dart';
-import 'package:Bloomee/blocs/library/cubit/library_items_cubit.dart';
-import 'package:Bloomee/blocs/media_player/bloomee_player_cubit.dart';
-import 'package:Bloomee/core/constants/route_paths.dart';
-import 'package:Bloomee/core/models/exported.dart';
-import 'package:Bloomee/core/theme/app_theme.dart';
-import 'package:Bloomee/l10n/app_localizations.dart';
-import 'package:Bloomee/screens/widgets/snackbar.dart';
-import 'package:Bloomee/screens/widgets/smart_replace_dialog.dart';
-import 'package:Bloomee/screens/widgets/song_tile.dart';
-import 'package:Bloomee/services/song_metadata_refresh_service.dart';
+import 'package:nasbeat/blocs/add_to_playlist/cubit/add_to_playlist_cubit.dart';
+import 'package:nasbeat/blocs/downloader/cubit/downloader_cubit.dart';
+import 'package:nasbeat/blocs/library/cubit/library_items_cubit.dart';
+import 'package:nasbeat/blocs/media_player/nasbeat_player_cubit.dart';
+import 'package:nasbeat/core/constants/route_paths.dart';
+import 'package:nasbeat/core/models/exported.dart';
+import 'package:nasbeat/core/theme/app_theme.dart';
+import 'package:nasbeat/l10n/app_localizations.dart';
+import 'package:nasbeat/screens/widgets/snackbar.dart';
+import 'package:nasbeat/screens/widgets/smart_replace_dialog.dart';
+import 'package:nasbeat/screens/widgets/song_tile.dart';
+import 'package:nasbeat/services/song_metadata_refresh_service.dart';
 
 void showMoreBottomSheet(
   BuildContext context,
@@ -29,7 +29,7 @@ void showMoreBottomSheet(
   bool showPlayNext = true,
   VoidCallback? onDelete,
 }) {
-  final playerCubit = context.read<BloomeePlayerCubit>();
+  final playerCubit = context.read<NasBeatPlayerCubit>();
   final libraryCubit = context.read<LibraryItemsCubit>();
   final playlistCubit = context.read<AddToPlaylistCubit>();
   final downloaderCubit = context.read<DownloaderCubit>();
@@ -158,8 +158,8 @@ class _TrackOptionsBottomSheet extends StatelessWidget {
                                         Theme.of(context).colorScheme.primary,
                                     onTap: (ctx) {
                                       ctx
-                                          .read<BloomeePlayerCubit>()
-                                          .bloomeePlayer
+                                          .read<NasBeatPlayerCubit>()
+                                          .nasbeatPlayer
                                           .updateQueueTracks([song],
                                               doPlay: true);
                                       Navigator.pop(ctx);
@@ -175,8 +175,8 @@ class _TrackOptionsBottomSheet extends StatelessWidget {
                                         Theme.of(context).colorScheme.tertiary,
                                     onTap: (ctx) {
                                       ctx
-                                          .read<BloomeePlayerCubit>()
-                                          .bloomeePlayer
+                                          .read<NasBeatPlayerCubit>()
+                                          .nasbeatPlayer
                                           .addPlayNextTrack(song);
                                       Navigator.pop(ctx);
                                       SnackbarService.showMessage(
@@ -191,8 +191,8 @@ class _TrackOptionsBottomSheet extends StatelessWidget {
                                         Theme.of(context).colorScheme.secondary,
                                     onTap: (ctx) {
                                       ctx
-                                          .read<BloomeePlayerCubit>()
-                                          .bloomeePlayer
+                                          .read<NasBeatPlayerCubit>()
+                                          .nasbeatPlayer
                                           .addQueueTracks([song]);
                                       Navigator.pop(ctx);
                                       SnackbarService.showMessage(
@@ -240,7 +240,7 @@ class _TrackOptionsBottomSheet extends StatelessWidget {
                             title: l10n.songInfoUpdateMetadata,
                             onTap: (ctx) async {
                               final player =
-                                  ctx.read<BloomeePlayerCubit>().bloomeePlayer;
+                                  ctx.read<NasBeatPlayerCubit>().nasbeatPlayer;
                               Navigator.pop(ctx);
 
                               final result =

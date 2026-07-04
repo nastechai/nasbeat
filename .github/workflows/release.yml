@@ -1,0 +1,163 @@
+name: Build & Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows-android:
+    name: Build Windows & Android
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Extract version from pubspec.yaml
+        shell: pwsh
+        run: |
+          $vLine = Select-String -Path pubspec.yaml -Pattern '^version:\s*(\S+)' | Select-Object -First 1
+          if (-not $vLine) { Write-Error 'version not found in pubspec.yaml'; exit 1 }
+          $ver = $vLine.Matches[0].Groups[1].Value.Split('+')[0]
+          "VERSION=$ver" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Create Android signing config
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace("${{ secrets.KEY_STORE }}")) {
+            Write-Host "No Android signing secrets found; release APKs will use debug signing."
+            exit 0
+          }
+
+          $b64 = "${{ secrets.KEY_STORE }}"
+          [IO.File]::WriteAllBytes("./android/nasbeat.jks", [Convert]::FromBase64String($b64))
+
+          @"
+storeFile=nasbeat.jks
+keyPassword=${{ secrets.KEY_PASSWORD }}
+storePassword=${{ secrets.STORE_PASSWORD }}
+keyAlias=${{ secrets.KEY_ALIAS }}
+"@ | Set-Content ./android/key.properties
+
+      - name: Build APKs
+        run: flutter build apk --release --split-per-abi --build-number ${{ github.run_number }}
+
+      - name: Verify APK Signatures
+        shell: pwsh
+        run: |
+          $buildToolsDir = Get-ChildItem "$env:ANDROID_HOME\build-tools" | Where-Object { $_.PSIsContainer } | Sort-Object Name -Descending | Select-Object -First 1
+          & "$($buildToolsDir.FullName)\apksigner.bat" verify build/app/outputs/flutter-apk/app-release.apk
+          & "$($buildToolsDir.FullName)\apksigner.bat" verify build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
+          & "$($buildToolsDir.FullName)\apksigner.bat" verify build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          & "$($buildToolsDir.FullName)\apksigner.bat" verify build/app/outputs/flutter-apk/app-x86_64-release.apk
+
+      - name: Rename APK files
+        shell: pwsh
+        run: |
+          Rename-Item -Path "build/app/outputs/flutter-apk/app-release.apk" -NewName "nasbeat_android_v$env:VERSION+${{ github.run_number }}_universal.apk"
+          Rename-Item -Path "build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk" -NewName "nasbeat_android_v$env:VERSION+${{ github.run_number }}_armeabi-v7a.apk"
+          Rename-Item -Path "build/app/outputs/flutter-apk/app-arm64-v8a-release.apk" -NewName "nasbeat_android_v$env:VERSION+${{ github.run_number }}_arm64-v8a.apk"
+          Rename-Item -Path "build/app/outputs/flutter-apk/app-x86_64-release.apk" -NewName "nasbeat_android_v$env:VERSION+${{ github.run_number }}_x86_64.apk"
+
+      - name: Build Windows App
+        run: flutter build windows --release --build-number ${{ github.run_number }}
+
+      - name: Package Windows Build
+        shell: pwsh
+        run: |
+          $package = "build/windows/x64/nasbeat_windows_x64_v$env:VERSION+${{ github.run_number }}.zip"
+          Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath $package
+          "WINDOWS_PACKAGE=$package" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-windows-android
+          path: |
+            build/app/outputs/flutter-apk/nasbeat_android_v${{ env.VERSION }}+${{ github.run_number }}_universal.apk
+            build/app/outputs/flutter-apk/nasbeat_android_v${{ env.VERSION }}+${{ github.run_number }}_armeabi-v7a.apk
+            build/app/outputs/flutter-apk/nasbeat_android_v${{ env.VERSION }}+${{ github.run_number }}_arm64-v8a.apk
+            build/app/outputs/flutter-apk/nasbeat_android_v${{ env.VERSION }}+${{ github.run_number }}_x86_64.apk
+            ${{ env.WINDOWS_PACKAGE }}
+
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: |
+            build/app/outputs/flutter-apk/nasbeat_android_v${{ env.VERSION }}+${{ github.run_number }}_universal.apk
+            build/app/outputs/flutter-apk/nasbeat_android_v${{ env.VERSION }}+${{ github.run_number }}_armeabi-v7a.apk
+            build/app/outputs/flutter-apk/nasbeat_android_v${{ env.VERSION }}+${{ github.run_number }}_arm64-v8a.apk
+            build/app/outputs/flutter-apk/nasbeat_android_v${{ env.VERSION }}+${{ github.run_number }}_x86_64.apk
+            ${{ env.WINDOWS_PACKAGE }}
+          tag: v${{ env.VERSION }}+${{ github.run_number }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          prerelease: true
+          allowUpdates: true
+
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Linux Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake git ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Extract version from pubspec.yaml
+        run: |
+          VERSION=$(grep -E '^version:' pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Build Linux App
+        run: flutter build linux --release --build-number ${{ github.run_number }}
+
+      - name: Compress Linux Build
+        run: |
+          tar -czf nasbeat_linux_x64_v${{ env.VERSION }}+${{ github.run_number }}.tar.gz -C build/linux/x64/release/bundle .
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-linux
+          path: nasbeat_linux_x64_v${{ env.VERSION }}+${{ github.run_number }}.tar.gz
+
+      - name: Publish Linux Release Asset
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: nasbeat_linux_x64_v${{ env.VERSION }}+${{ github.run_number }}.tar.gz
+          tag: v${{ env.VERSION }}+${{ github.run_number }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          prerelease: true
+          allowUpdates: true
+          omitBodyDuringUpdate: true

@@ -1,4 +1,4 @@
-/// Opens the legacy `default.isar` database (created by the old Bloomee ≤ v2
+/// Opens the legacy `default.isar` database (created by the old NasBeat ≤ v2
 /// codebase) using the original Isar file name `default`.
 ///
 /// This file is intentionally isolated so it can be deleted once no users
@@ -6,7 +6,7 @@
 ///
 /// Usage:
 /// ```dart
-/// import 'package:Bloomee/services/db/legacy/legacy_db_opener.dart' as legacyOpener;
+/// import 'package:nasbeat/services/db/legacy/legacy_db_opener.dart' as legacyOpener;
 ///
 /// final isar = await legacyOpener.openLegacyDB(appSuppDir);
 /// // read data …

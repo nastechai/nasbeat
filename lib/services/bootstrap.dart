@@ -1,14 +1,14 @@
 import 'dart:async';
 import 'dart:developer';
 
-import 'package:Bloomee/core/constants/setting_keys.dart';
-import 'package:Bloomee/core/di/service_locator.dart';
-import 'package:Bloomee/services/db/dao/settings_dao.dart';
-import 'package:Bloomee/services/local_music_service.dart';
-import 'package:Bloomee/services/plugin_bootstrap_service.dart';
-import 'package:Bloomee/services/onboarding_service.dart';
-import 'package:Bloomee/src/rust/frb_generated.dart';
-import 'package:Bloomee/services/db/db_provider.dart';
+import 'package:nasbeat/core/constants/setting_keys.dart';
+import 'package:nasbeat/core/di/service_locator.dart';
+import 'package:nasbeat/services/db/dao/settings_dao.dart';
+import 'package:nasbeat/services/local_music_service.dart';
+import 'package:nasbeat/services/plugin_bootstrap_service.dart';
+import 'package:nasbeat/services/onboarding_service.dart';
+import 'package:nasbeat/src/rust/frb_generated.dart';
+import 'package:nasbeat/services/db/db_provider.dart';
 import 'package:path_provider/path_provider.dart';
 
 /// Application bootstrap — run once before [runApp].

@@ -3,10 +3,10 @@ import 'dart:async';
 import 'package:audio_service/audio_service.dart';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:Bloomee/blocs/media_player/bloomee_player_cubit.dart';
-import 'package:Bloomee/core/models/exported.dart' hide MediaItem;
-import 'package:Bloomee/core/adapters/track_adapter.dart';
-import 'package:Bloomee/services/player/player_engine.dart';
+import 'package:nasbeat/blocs/media_player/nasbeat_player_cubit.dart';
+import 'package:nasbeat/core/models/exported.dart' hide MediaItem;
+import 'package:nasbeat/core/adapters/track_adapter.dart';
+import 'package:nasbeat/services/player/player_engine.dart';
 import 'package:rxdart/rxdart.dart';
 
 // ─── State ───────────────────────────────────────────────────────────────────
@@ -90,10 +90,10 @@ class MiniPlayerState extends Equatable {
 /// - **Minimal state machine**: One [MiniPlayerState] with boolean flags
 ///   instead of a sealed class hierarchy with 5+ subtypes.
 class MiniPlayerCubit extends Cubit<MiniPlayerState> {
-  final BloomeePlayerCubit _playerCubit;
+  final NasBeatPlayerCubit _playerCubit;
   StreamSubscription? _sub;
 
-  MiniPlayerCubit({required BloomeePlayerCubit playerCubit})
+  MiniPlayerCubit({required NasBeatPlayerCubit playerCubit})
       : _playerCubit = playerCubit,
         super(const MiniPlayerState.hidden()) {
     _listen();
@@ -102,12 +102,12 @@ class MiniPlayerCubit extends Cubit<MiniPlayerState> {
   void _listen() {
     _sub = Rx.combineLatest4<MediaItem?, EngineState, bool, bool,
         (MediaItem?, EngineState, bool, bool)>(
-      _playerCubit.bloomeePlayer.mediaItem,
-      Rx.defer(() => _playerCubit.bloomeePlayer.engine.stateStream,
+      _playerCubit.nasbeatPlayer.mediaItem,
+      Rx.defer(() => _playerCubit.nasbeatPlayer.engine.stateStream,
           reusable: true),
-      Rx.defer(() => _playerCubit.bloomeePlayer.engine.playingStream,
+      Rx.defer(() => _playerCubit.nasbeatPlayer.engine.playingStream,
           reusable: true),
-      _playerCubit.bloomeePlayer.isResolving,
+      _playerCubit.nasbeatPlayer.isResolving,
       (media, engineState, playing, resolving) =>
           (media, engineState, playing, resolving),
     ).listen((record) {

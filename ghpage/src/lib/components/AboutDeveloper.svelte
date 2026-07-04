@@ -3,26 +3,26 @@
 <section class="about-developer">
   <h2>Who Am I?</h2>
   <p class="about-subtitle">
-    Hi, I'm Hemant—a developer who codes for fun and shares open-source projects to learn, grow, and help others discover new possibilities.
+    Hi, I'm NasTech—a developer who codes for fun and shares open-source projects to learn, grow, and help others discover new possibilities.
   </p>
   <div class="contact-buttons">
-  <a href="https://x.com/iamhemantindia" class="contact-btn x" target="_blank" rel="noopener noreferrer" aria-label="Hemant on X" title="X - iamhemantindia">
+  <a href="https://x.com/nastechai" class="contact-btn x" target="_blank" rel="noopener noreferrer" aria-label="NasTech on X" title="X - nastechai">
       <i class="fa-brands fa-x-twitter"></i>
       X
     </a>
-  <a href="https://linkedin.com/in/iamhemantindia" class="contact-btn linkedin" target="_blank" rel="noopener noreferrer" aria-label="Hemant on LinkedIn" title="LinkedIn - iamhemantindia">
+  <a href="https://linkedin.com/in/nastechai" class="contact-btn linkedin" target="_blank" rel="noopener noreferrer" aria-label="NasTech on LinkedIn" title="LinkedIn - nastechai">
       <i class="fa-brands fa-linkedin"></i>
       LinkedIn
     </a>
-  <a href="https://github.com/HemantKArya" class="contact-btn github" target="_blank" rel="noopener noreferrer" aria-label="Hemant on GitHub" title="GitHub - HemantKArya">
+  <a href="https://github.com/nastechai" class="contact-btn github" target="_blank" rel="noopener noreferrer" aria-label="NasTech on GitHub" title="GitHub - nastechai">
       <i class="fa-brands fa-github"></i>
       GitHub
     </a>
-  <a href="https://instagram.com/iamhemantindia" class="contact-btn instagram" target="_blank" rel="noopener noreferrer" aria-label="Hemant on Instagram" title="Instagram - iamhemantindia">
+  <a href="https://instagram.com/nastechai" class="contact-btn instagram" target="_blank" rel="noopener noreferrer" aria-label="NasTech on Instagram" title="Instagram - nastechai">
       <i class="fa-brands fa-instagram"></i>
       Instagram
     </a>
-  <a href="mailto:iamhemantindia@protonmail.com" class="contact-btn email" aria-label="Email Hemant" title="Email Hemant">
+  <a href="mailto:nastechai@protonmail.com" class="contact-btn email" aria-label="Email NasTech" title="Email NasTech">
       <i class="fa-solid fa-envelope"></i>
       Email Me
     </a>

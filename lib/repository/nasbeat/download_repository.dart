@@ -1,6 +1,6 @@
-import 'package:Bloomee/core/models/exported.dart';
-import 'package:Bloomee/services/db/global_db.dart';
-import 'package:Bloomee/services/db/dao/download_dao.dart';
+import 'package:nasbeat/core/models/exported.dart';
+import 'package:nasbeat/services/db/global_db.dart';
+import 'package:nasbeat/services/db/dao/download_dao.dart';
 
 /// Repository for download operations — wraps [DownloadDAO].
 class DownloadRepository {

@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'package:Bloomee/blocs/media_player/bloomee_player_cubit.dart';
-import 'package:Bloomee/core/theme/app_theme.dart';
+import 'package:nasbeat/blocs/media_player/nasbeat_player_cubit.dart';
+import 'package:nasbeat/core/theme/app_theme.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -35,8 +35,8 @@ class _VolumeDragControllerState extends State<VolumeDragController> {
 
   void volumeStrm() {
     _volumeSubscription = context
-        .read<BloomeePlayerCubit>()
-        .bloomeePlayer
+        .read<NasBeatPlayerCubit>()
+        .nasbeatPlayer
         .engine
         .volumeStream
         .listen((event) {
@@ -50,7 +50,7 @@ class _VolumeDragControllerState extends State<VolumeDragController> {
     setState(() {
       _volume = volume;
     });
-    context.read<BloomeePlayerCubit>().bloomeePlayer.engine.setVolume(volume);
+    context.read<NasBeatPlayerCubit>().nasbeatPlayer.engine.setVolume(volume);
   }
 
   void _onDragStart(DragStartDetails details) {

@@ -1,17 +1,17 @@
-import 'package:Bloomee/blocs/settings_cubit/cubit/settings_cubit.dart';
-import 'package:Bloomee/core/di/service_locator.dart';
-import 'package:Bloomee/plugins/blocs/chart/chart_bloc.dart';
-import 'package:Bloomee/plugins/blocs/chart/chart_event.dart';
-import 'package:Bloomee/plugins/blocs/chart/chart_state.dart';
-import 'package:Bloomee/plugins/blocs/plugin/plugin_bloc.dart';
+import 'package:nasbeat/blocs/settings_cubit/cubit/settings_cubit.dart';
+import 'package:nasbeat/core/di/service_locator.dart';
+import 'package:nasbeat/plugins/blocs/chart/chart_bloc.dart';
+import 'package:nasbeat/plugins/blocs/chart/chart_event.dart';
+import 'package:nasbeat/plugins/blocs/chart/chart_state.dart';
+import 'package:nasbeat/plugins/blocs/plugin/plugin_bloc.dart';
 
-import 'package:Bloomee/repository/LastFM/lastfmapi.dart';
-import 'package:Bloomee/screens/screen/home_views/setting_views/setting_shared_widgets.dart';
-import 'package:Bloomee/screens/widgets/snackbar.dart';
+import 'package:nasbeat/repository/LastFM/lastfmapi.dart';
+import 'package:nasbeat/screens/screen/home_views/setting_views/setting_shared_widgets.dart';
+import 'package:nasbeat/screens/widgets/snackbar.dart';
 import 'package:flutter/material.dart';
-import 'package:Bloomee/core/theme/app_theme.dart';
+import 'package:nasbeat/core/theme/app_theme.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:Bloomee/l10n/app_localizations.dart';
+import 'package:nasbeat/l10n/app_localizations.dart';
 import 'package:icons_plus/icons_plus.dart';
 
 class AppUISettings extends StatefulWidget {

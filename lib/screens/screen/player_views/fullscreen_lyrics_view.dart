@@ -1,16 +1,16 @@
 import 'dart:async';
 import 'dart:ui';
-import 'package:Bloomee/blocs/lyrics/lyrics_cubit.dart';
-import 'package:Bloomee/blocs/media_player/bloomee_player_cubit.dart';
-import 'package:Bloomee/blocs/mini_player/mini_player_cubit.dart';
-import 'package:Bloomee/screens/screen/player_views/lyrics_search.dart';
-import 'package:Bloomee/screens/widgets/media_metadata_links.dart';
-import 'package:Bloomee/screens/widgets/play_pause_widget.dart';
-import 'package:Bloomee/screens/widgets/sign_board_widget.dart';
-import 'package:Bloomee/screens/widgets/up_next_panel.dart';
-import 'package:Bloomee/l10n/app_localizations.dart';
-import 'package:Bloomee/core/theme/app_theme.dart';
-import 'package:Bloomee/utils/load_image.dart';
+import 'package:nasbeat/blocs/lyrics/lyrics_cubit.dart';
+import 'package:nasbeat/blocs/media_player/nasbeat_player_cubit.dart';
+import 'package:nasbeat/blocs/mini_player/mini_player_cubit.dart';
+import 'package:nasbeat/screens/screen/player_views/lyrics_search.dart';
+import 'package:nasbeat/screens/widgets/media_metadata_links.dart';
+import 'package:nasbeat/screens/widgets/play_pause_widget.dart';
+import 'package:nasbeat/screens/widgets/sign_board_widget.dart';
+import 'package:nasbeat/screens/widgets/up_next_panel.dart';
+import 'package:nasbeat/l10n/app_localizations.dart';
+import 'package:nasbeat/core/theme/app_theme.dart';
+import 'package:nasbeat/utils/load_image.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -45,8 +45,8 @@ class _FullscreenLyricsViewState extends State<FullscreenLyricsView> {
     _startHideControlsTimer();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
-    final playerCubit = context.read<BloomeePlayerCubit>();
-    _currentTrackId = playerCubit.bloomeePlayer.currentTrackInfo.id;
+    final playerCubit = context.read<NasBeatPlayerCubit>();
+    _currentTrackId = playerCubit.nasbeatPlayer.currentTrackInfo.id;
 
     _loadPersistedOffset();
   }
@@ -105,7 +105,7 @@ class _FullscreenLyricsViewState extends State<FullscreenLyricsView> {
 
   void _stopOffsetChange() => _holdTimer?.cancel();
 
-  void _openSettingsMenu(LyricsState state, BloomeePlayerCubit playerCubit) {
+  void _openSettingsMenu(LyricsState state, NasBeatPlayerCubit playerCubit) {
     _hideControlsTimer?.cancel();
     showModalBottomSheet(
       context: context,
@@ -127,7 +127,7 @@ class _FullscreenLyricsViewState extends State<FullscreenLyricsView> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final bloomeePlayerCubit = context.read<BloomeePlayerCubit>();
+    final nasbeatPlayerCubit = context.read<NasBeatPlayerCubit>();
     final isDesktop = MediaQuery.of(context).size.width > 600;
 
     return Scaffold(
@@ -138,7 +138,7 @@ class _FullscreenLyricsViewState extends State<FullscreenLyricsView> {
         behavior: HitTestBehavior.translucent,
         child: Stack(
           children: [
-            _buildBackground(bloomeePlayerCubit),
+            _buildBackground(nasbeatPlayerCubit),
             Container(color: Colors.black.withValues(alpha: 0.4)),
             Positioned.fill(
               child: BlocBuilder<LyricsCubit, LyricsState>(
@@ -209,7 +209,7 @@ class _FullscreenLyricsViewState extends State<FullscreenLyricsView> {
               right: 0,
               child: GestureDetector(
                 onTap: () {},
-                child: _buildTopBar(bloomeePlayerCubit, isDesktop),
+                child: _buildTopBar(nasbeatPlayerCubit, isDesktop),
               ),
             ),
             AnimatedPositioned(
@@ -220,7 +220,7 @@ class _FullscreenLyricsViewState extends State<FullscreenLyricsView> {
               right: 0,
               child: GestureDetector(
                 onTap: () {},
-                child: _buildBottomControls(bloomeePlayerCubit, isDesktop),
+                child: _buildBottomControls(nasbeatPlayerCubit, isDesktop),
               ),
             ),
             AnimatedPositioned(
@@ -250,11 +250,11 @@ class _FullscreenLyricsViewState extends State<FullscreenLyricsView> {
     );
   }
 
-  Widget _buildBackground(BloomeePlayerCubit bloomeePlayerCubit) {
+  Widget _buildBackground(NasBeatPlayerCubit nasbeatPlayerCubit) {
     return StreamBuilder<MediaItem?>(
-      stream: bloomeePlayerCubit.bloomeePlayer.mediaItem,
+      stream: nasbeatPlayerCubit.nasbeatPlayer.mediaItem,
       builder: (context, snapshot) {
-        final currentTrack = bloomeePlayerCubit.bloomeePlayer.currentTrackInfo;
+        final currentTrack = nasbeatPlayerCubit.nasbeatPlayer.currentTrackInfo;
         final artworkUrl =
             currentTrack.thumbnail.urlLow ?? currentTrack.thumbnail.url;
 
@@ -297,7 +297,7 @@ class _FullscreenLyricsViewState extends State<FullscreenLyricsView> {
     );
   }
 
-  Widget _buildTopBar(BloomeePlayerCubit bloomeePlayerCubit, bool isDesktop) {
+  Widget _buildTopBar(NasBeatPlayerCubit nasbeatPlayerCubit, bool isDesktop) {
     return Container(
       padding: EdgeInsets.fromLTRB(
           16, MediaQuery.of(context).padding.top + 16, 16, 40),
@@ -322,10 +322,10 @@ class _FullscreenLyricsViewState extends State<FullscreenLyricsView> {
               const SizedBox(width: 16),
               Expanded(
                 child: StreamBuilder<MediaItem?>(
-                  stream: bloomeePlayerCubit.bloomeePlayer.mediaItem,
+                  stream: nasbeatPlayerCubit.nasbeatPlayer.mediaItem,
                   builder: (context, snapshot) {
                     final currentTrack =
-                        bloomeePlayerCubit.bloomeePlayer.currentTrackInfo;
+                        nasbeatPlayerCubit.nasbeatPlayer.currentTrackInfo;
                     return Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.center,
@@ -363,7 +363,7 @@ class _FullscreenLyricsViewState extends State<FullscreenLyricsView> {
                 builder: (context, state) {
                   return IconButton(
                     onPressed: () =>
-                        _openSettingsMenu(state, bloomeePlayerCubit),
+                        _openSettingsMenu(state, nasbeatPlayerCubit),
                     icon: const Icon(MingCute.more_2_fill,
                         color: Colors.white, size: 28),
                   );
@@ -483,9 +483,9 @@ class _FullscreenLyricsViewState extends State<FullscreenLyricsView> {
   }
 
   Widget _buildBottomControls(
-      BloomeePlayerCubit bloomeePlayerCubit, bool isDesktop) {
+      NasBeatPlayerCubit nasbeatPlayerCubit, bool isDesktop) {
     final l10n = AppLocalizations.of(context)!;
-    final musicPlayer = bloomeePlayerCubit.bloomeePlayer;
+    final musicPlayer = nasbeatPlayerCubit.nasbeatPlayer;
     final paddingBottom = MediaQuery.of(context).padding.bottom;
 
     return Container(
@@ -649,7 +649,7 @@ class _FullscreenSyncedLyricsState extends State<FullscreenSyncedLyrics> {
   }
 
   void _forceSyncRecalculation() {
-    final player = context.read<BloomeePlayerCubit>().bloomeePlayer.engine;
+    final player = context.read<NasBeatPlayerCubit>().nasbeatPlayer.engine;
     final adjustedPosition = player.position + widget.lyricOffset;
     widget.positionNotifier.value = adjustedPosition;
 
@@ -661,8 +661,8 @@ class _FullscreenSyncedLyricsState extends State<FullscreenSyncedLyrics> {
   }
 
   void _setupPositionListener() {
-    final bloomeePlayerCubit = context.read<BloomeePlayerCubit>();
-    final posStream = bloomeePlayerCubit.bloomeePlayer.engine.positionStream;
+    final nasbeatPlayerCubit = context.read<NasBeatPlayerCubit>();
+    final posStream = nasbeatPlayerCubit.nasbeatPlayer.engine.positionStream;
 
     _positionSubscription = posStream.listen((rawPosition) {
       if (!mounted) return;
@@ -773,8 +773,8 @@ class _FullscreenSyncedLyricsState extends State<FullscreenSyncedLyrics> {
               onTap: () {
                 widget.onInteraction?.call();
                 context
-                    .read<BloomeePlayerCubit>()
-                    .bloomeePlayer
+                    .read<NasBeatPlayerCubit>()
+                    .nasbeatPlayer
                     .seek(lyric.start - widget.lyricOffset);
               },
               child: _KaraokeLyricLine(

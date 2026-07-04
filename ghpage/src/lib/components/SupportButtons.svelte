@@ -1,8 +1,7 @@
 <script>
 	export let buttons = [
-		{ type: 'paypal', icon: 'fa-brands fa-paypal', text: 'PayPal', href: 'https://www.paypal.com/ncp/payment/JKSMRB5E3PAF2' },
-		{ type: 'librepay', icon: 'fa-solid fa-heart', text: 'Liberapay', href: 'https://liberapay.com/hemantkarya' },
-        { type: 'upi', text: 'Razorpay UPI', href: 'https://razorpay.me/@iamhemant', customIcon: 'https://upload.wikimedia.org/wikipedia/commons/e/e1/UPI-Logo-vector.svg' },
+		{ type: 'github', icon: 'fa-brands fa-github', text: 'GitHub', href: 'https://github.com/nastechai/nasbeat' },
+		{ type: 'website', icon: 'fa-solid fa-globe', text: 'Website', href: 'https://nasbeat.nastechai.com' },
 	];
 
 	export let highlighted = false;
@@ -85,28 +84,16 @@
 	}
 	
 	/* --- Button Color Styles --- */
-	.support-btn.paypal {
-		background: #256aff; /* A more accurate PayPal blue */
+	.support-btn.github {
+		background: #111827;
 		border: 1px solid rgba(95, 131, 238, 0.7);
 		color: white;
 	}
 	
-	.support-btn.upi {
-		background: rgba(34, 139, 34, 0.9);
-		border: 1px solid rgba(34, 139, 34, 0.7);
+	.support-btn.website {
+		background: rgba(12, 74, 110, 0.95);
+		border: 1px solid rgba(56, 189, 248, 0.7);
 		color: white;
-	}
-
-	/* Style for the UPI icon image */
-	.support-btn.upi .btn-icon {
-		filter: brightness(0) invert(1);
-	}
-	
-	.support-btn.librepay {
-		background: #f6c915; /* Standard Librepay yellow */
-		border: 1px solid rgba(255, 215, 0, 0.7);
-		/* Use dark text for better contrast and readability */
-		color: #1a1a1a; 
 	}
 	
 	/* --- Highlighted State Styles (Unchanged) --- */
@@ -114,30 +101,21 @@
 		animation: none;
 	}
 	
-	.support-container.highlighted .support-btn.paypal {
-		background: rgb(69, 112, 255);
-		border-color: rgb(67, 146, 255);
-		box-shadow: 
-			0 3px 12px rgba(106, 168, 255, 0.4),
-			0 0 20px rgba(101, 161, 245, 0.3);
+	.support-container.highlighted .support-btn.github {
+		background: rgb(31, 41, 55);
+		border-color: rgb(75, 85, 99);
+		box-shadow:
+			0 3px 12px rgba(17, 24, 39, 0.4),
+			0 0 20px rgba(17, 24, 39, 0.3);
 		animation: softBlink 1s ease-in-out 3;
 	}
 	
-	.support-container.highlighted .support-btn.upi {
-		background: rgba(34, 139, 34, 1);
-		border-color: rgba(34, 139, 34, 1);
-		box-shadow: 
-			0 3px 12px rgba(34, 139, 34, 0.4),
-			0 0 20px rgba(34, 139, 34, 0.3);
-		animation: softBlink 1s ease-in-out 3;
-	}
-	
-	.support-container.highlighted .support-btn.librepay {
-		background: rgba(255, 215, 0, 1);
-		border-color: rgba(255, 215, 0, 1);
-		box-shadow: 
-			0 3px 12px rgba(255, 215, 0, 0.4),
-			0 0 20px rgba(255, 215, 0, 0.3);
+	.support-container.highlighted .support-btn.website {
+		background: rgba(8, 47, 73, 1);
+		border-color: rgba(14, 165, 233, 1);
+		box-shadow:
+			0 3px 12px rgba(14, 165, 233, 0.4),
+			0 0 20px rgba(14, 165, 233, 0.3);
 		animation: softBlink 1s ease-in-out 3;
 	}
 	

@@ -2,12 +2,12 @@ import 'dart:async';
 import 'dart:developer';
 import 'dart:io';
 
-import 'package:Bloomee/plugins/utils/media_id.dart';
-import 'package:Bloomee/services/db/dao/playlist_dao.dart';
-import 'package:Bloomee/services/db/dao/track_dao.dart';
-import 'package:Bloomee/services/db/global_db.dart';
-import 'package:Bloomee/src/rust/api/local_music.dart';
-import 'package:Bloomee/src/rust/api/plugin/models.dart';
+import 'package:nasbeat/plugins/utils/media_id.dart';
+import 'package:nasbeat/services/db/dao/playlist_dao.dart';
+import 'package:nasbeat/services/db/dao/track_dao.dart';
+import 'package:nasbeat/services/db/global_db.dart';
+import 'package:nasbeat/src/rust/api/local_music.dart';
+import 'package:nasbeat/src/rust/api/plugin/models.dart';
 import 'package:isar_community/isar.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -270,7 +270,7 @@ class DownloadDAO {
 
   Future<String> _runtimeArtworkCacheDir() async {
     final tempDir = await getTemporaryDirectory();
-    return p.join(tempDir.path, 'bloomee_runtime_embedded_art');
+    return p.join(tempDir.path, 'nasbeat_runtime_embedded_art');
   }
 
   Future<Track> _resolveEmbeddedArtworkAtRuntime(

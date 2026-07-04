@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'dart:developer';
-import 'package:Bloomee/blocs/global_events/global_events_cubit.dart';
-import 'package:Bloomee/core/events/global_event_bus.dart';
-import 'package:Bloomee/l10n/app_localizations.dart';
-import 'package:Bloomee/screens/screen/common_views/changelog_reader.dart';
-import 'package:Bloomee/screens/widgets/bloomee_ui_kit/bloomee_dialog.dart';
-import 'package:Bloomee/screens/widgets/snackbar.dart';
-import 'package:Bloomee/services/plugin/plugin_event_bus.dart';
-import 'package:Bloomee/src/rust/api/plugin/events.dart';
+import 'package:nasbeat/blocs/global_events/global_events_cubit.dart';
+import 'package:nasbeat/core/events/global_event_bus.dart';
+import 'package:nasbeat/l10n/app_localizations.dart';
+import 'package:nasbeat/screens/screen/common_views/changelog_reader.dart';
+import 'package:nasbeat/screens/widgets/nasbeat_ui_kit/nasbeat_dialog.dart';
+import 'package:nasbeat/screens/widgets/snackbar.dart';
+import 'package:nasbeat/services/plugin/plugin_event_bus.dart';
+import 'package:nasbeat/src/rust/api/plugin/events.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -119,14 +119,14 @@ class _GlobalEventListenerState extends State<GlobalEventListener> {
             final s = state as UpdateAvailable;
             final l10n = AppLocalizations.of(dialogContext)!;
             log("Update Available: ${s.newVersion}+${s.newBuild}");
-            showBloomeeDialog(
+            showNasBeatDialog(
               context: dialogContext,
               title: l10n.dialogUpdateAvailable,
               subtitle: l10n.updateAvailableBody(s.newVersion, s.newBuild),
               icon: Icons.system_update_rounded,
               actions: [
-                BloomeeDialogAction.text(l10n.buttonLater),
-                BloomeeDialogAction.filled(l10n.dialogUpdateNow, onPressed: () {
+                NasBeatDialogAction.text(l10n.buttonLater),
+                NasBeatDialogAction.filled(l10n.dialogUpdateNow, onPressed: () {
                   openURL(s.downloadUrl);
                 }),
               ],
@@ -135,12 +135,12 @@ class _GlobalEventListenerState extends State<GlobalEventListener> {
           case AlertDialogState:
             final s = state as AlertDialogState;
             final l10n = AppLocalizations.of(dialogContext)!;
-            showBloomeeDialog(
+            showNasBeatDialog(
               context: dialogContext,
               title: s.title,
               subtitle: s.content,
               actions: [
-                BloomeeDialogAction.filled(l10n.buttonOk),
+                NasBeatDialogAction.filled(l10n.buttonOk),
               ],
             );
             break;

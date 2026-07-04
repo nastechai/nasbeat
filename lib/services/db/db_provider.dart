@@ -6,15 +6,15 @@ import 'package:isar_community/isar.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-import 'package:Bloomee/core/models/exported.dart' as models;
-import 'package:Bloomee/services/db/global_db.dart';
-import 'package:Bloomee/services/db/dao/cache_dao.dart';
-import 'package:Bloomee/services/db/dao/history_dao.dart';
-import 'package:Bloomee/services/db/legacy/legacy_media_id_mapper.dart';
-import 'package:Bloomee/services/db/dao/playlist_dao.dart';
-import 'package:Bloomee/services/db/dao/search_history_dao.dart';
-import 'package:Bloomee/services/db/dao/settings_dao.dart';
-import 'package:Bloomee/services/db/dao/track_dao.dart';
+import 'package:nasbeat/core/models/exported.dart' as models;
+import 'package:nasbeat/services/db/global_db.dart';
+import 'package:nasbeat/services/db/dao/cache_dao.dart';
+import 'package:nasbeat/services/db/dao/history_dao.dart';
+import 'package:nasbeat/services/db/legacy/legacy_media_id_mapper.dart';
+import 'package:nasbeat/services/db/dao/playlist_dao.dart';
+import 'package:nasbeat/services/db/dao/search_history_dao.dart';
+import 'package:nasbeat/services/db/dao/settings_dao.dart';
+import 'package:nasbeat/services/db/dao/track_dao.dart';
 
 /// Centralised Isar lifecycle manager.
 ///
@@ -78,8 +78,8 @@ class DBProvider {
       if (!await dbFile.exists()) {
         await checkAndRestoreDB(dbFile.path, [
           p.join(appDocDir, 'dbv3.isar'),
-          p.join(appDocDir, 'bloomee_backup_dbv3.isar'),
-          p.join(appSuppDir, 'bloomee_backup_dbv3.isar'),
+          p.join(appDocDir, 'nasbeat_backup_dbv3.isar'),
+          p.join(appSuppDir, 'nasbeat_backup_dbv3.isar'),
         ]);
       }
 
@@ -167,7 +167,7 @@ class DBProvider {
   static Future<String> getDbBackupFilePath() async {
     String backupPath = (await getDownloadsDirectory())?.path ?? appDocDir;
     backupPath =
-        p.join(backupPath, 'bloomeeBackup', 'bloomee_backup_dbv3.json');
+        p.join(backupPath, 'nasbeatBackup', 'nasbeat_backup_dbv3.json');
     return backupPath;
   }
 
@@ -287,7 +287,7 @@ class DBProvider {
         '_meta': {
           'format': 'legacy-v2-full',
           'exportedAt': DateTime.now().toIso8601String(),
-          'generatedBy': 'Bloomee DBProvider',
+          'generatedBy': 'NasBeat DBProvider',
           'playlistsCount': playlistRows.length,
           'mediaItemsCount': mediaRows.length,
         },

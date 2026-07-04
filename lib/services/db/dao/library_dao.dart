@@ -1,11 +1,11 @@
 ﻿import 'dart:developer';
 
-import 'package:Bloomee/core/models/exported.dart';
-import 'package:Bloomee/core/models/media_playlist_model.dart';
-import 'package:Bloomee/services/db/global_db.dart';
-import 'package:Bloomee/services/db/mappers/collection_mapper.dart';
-import 'package:Bloomee/services/db/mappers/media_item_mapper.dart';
-import 'package:Bloomee/services/db/mappers/playlist_mapper.dart';
+import 'package:nasbeat/core/models/exported.dart';
+import 'package:nasbeat/core/models/media_playlist_model.dart';
+import 'package:nasbeat/services/db/global_db.dart';
+import 'package:nasbeat/services/db/mappers/collection_mapper.dart';
+import 'package:nasbeat/services/db/mappers/media_item_mapper.dart';
+import 'package:nasbeat/services/db/mappers/playlist_mapper.dart';
 import 'package:isar_community/isar.dart';
 
 /// DAO for the user's saved library: artists, albums, and remote playlists.

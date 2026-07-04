@@ -1,12 +1,12 @@
 import 'dart:developer';
-import 'package:Bloomee/core/models/exported.dart';
-import 'package:Bloomee/plugins/utils/media_id.dart';
-import 'package:Bloomee/core/constants/setting_keys.dart';
-import 'package:Bloomee/services/db/db_provider.dart';
-import 'package:Bloomee/services/db/dao/settings_dao.dart';
-import 'package:Bloomee/services/player/player_engine.dart';
-import 'package:Bloomee/services/plugin/plugin_service.dart';
-import 'package:Bloomee/src/rust/api/plugin/commands.dart';
+import 'package:nasbeat/core/models/exported.dart';
+import 'package:nasbeat/plugins/utils/media_id.dart';
+import 'package:nasbeat/core/constants/setting_keys.dart';
+import 'package:nasbeat/services/db/db_provider.dart';
+import 'package:nasbeat/services/db/dao/settings_dao.dart';
+import 'package:nasbeat/services/player/player_engine.dart';
+import 'package:nasbeat/services/plugin/plugin_service.dart';
+import 'package:nasbeat/src/rust/api/plugin/commands.dart';
 import 'package:rxdart/rxdart.dart';
 
 class RelatedSongsManager {

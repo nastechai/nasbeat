@@ -1,12 +1,12 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
-import 'package:Bloomee/core/models/exported.dart';
-import 'package:Bloomee/core/models/media_playlist_model.dart';
-import 'package:Bloomee/services/db/dao/playlist_dao.dart';
-import 'package:Bloomee/services/db/mappers/media_item_mapper.dart';
+import 'package:nasbeat/core/models/exported.dart';
+import 'package:nasbeat/core/models/media_playlist_model.dart';
+import 'package:nasbeat/services/db/dao/playlist_dao.dart';
+import 'package:nasbeat/services/db/mappers/media_item_mapper.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:palette_generator/palette_generator.dart';
-import 'package:Bloomee/utils/pallete_generator.dart';
+import 'package:nasbeat/utils/pallete_generator.dart';
 
 part 'current_playlist_state.dart';
 

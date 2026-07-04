@@ -1,10 +1,10 @@
-import 'package:Bloomee/core/events/global_event_bus.dart';
-import 'package:Bloomee/core/models/exported.dart';
-import 'package:Bloomee/plugins/blocs/plugin/plugin_bloc.dart';
-import 'package:Bloomee/plugins/utils/media_id.dart';
-import 'package:Bloomee/screens/screen/common_views/album_view.dart';
-import 'package:Bloomee/screens/screen/common_views/artist_view.dart';
-import 'package:Bloomee/screens/screen/common_views/playlist_view.dart';
+import 'package:nasbeat/core/events/global_event_bus.dart';
+import 'package:nasbeat/core/models/exported.dart';
+import 'package:nasbeat/plugins/blocs/plugin/plugin_bloc.dart';
+import 'package:nasbeat/plugins/utils/media_id.dart';
+import 'package:nasbeat/screens/screen/common_views/album_view.dart';
+import 'package:nasbeat/screens/screen/common_views/artist_view.dart';
+import 'package:nasbeat/screens/screen/common_views/playlist_view.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';

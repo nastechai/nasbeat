@@ -1,9 +1,9 @@
 ﻿import 'dart:developer';
 
-import 'package:Bloomee/services/db/dao/track_dao.dart';
-import 'package:Bloomee/services/db/global_db.dart';
-import 'package:Bloomee/services/db/mappers/media_item_mapper.dart';
-import 'package:Bloomee/src/rust/api/plugin/models.dart';
+import 'package:nasbeat/services/db/dao/track_dao.dart';
+import 'package:nasbeat/services/db/global_db.dart';
+import 'package:nasbeat/services/db/mappers/media_item_mapper.dart';
+import 'package:nasbeat/src/rust/api/plugin/models.dart';
 import 'package:isar_community/isar.dart';
 
 /// DAO for recording and querying playback history.

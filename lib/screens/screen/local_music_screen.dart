@@ -1,17 +1,17 @@
 import 'dart:developer';
 
-import 'package:Bloomee/blocs/local_music/cubit/local_music_cubit.dart';
-import 'package:Bloomee/blocs/media_player/bloomee_player_cubit.dart';
-import 'package:Bloomee/core/models/exported.dart';
-import 'package:Bloomee/core/models/media_playlist_model.dart';
-import 'package:Bloomee/core/theme/app_theme.dart';
-import 'package:Bloomee/l10n/app_localizations.dart';
-import 'package:Bloomee/screens/widgets/bloomee_ui_kit/bloomee_dialog.dart';
-import 'package:Bloomee/screens/widgets/more_bottom_sheet.dart';
-import 'package:Bloomee/screens/widgets/sign_board_widget.dart';
-import 'package:Bloomee/screens/widgets/snackbar.dart';
-import 'package:Bloomee/screens/widgets/song_tile.dart';
-import 'package:Bloomee/services/local_music_service.dart';
+import 'package:nasbeat/blocs/local_music/cubit/local_music_cubit.dart';
+import 'package:nasbeat/blocs/media_player/nasbeat_player_cubit.dart';
+import 'package:nasbeat/core/models/exported.dart';
+import 'package:nasbeat/core/models/media_playlist_model.dart';
+import 'package:nasbeat/core/theme/app_theme.dart';
+import 'package:nasbeat/l10n/app_localizations.dart';
+import 'package:nasbeat/screens/widgets/nasbeat_ui_kit/nasbeat_dialog.dart';
+import 'package:nasbeat/screens/widgets/more_bottom_sheet.dart';
+import 'package:nasbeat/screens/widgets/sign_board_widget.dart';
+import 'package:nasbeat/screens/widgets/snackbar.dart';
+import 'package:nasbeat/screens/widgets/song_tile.dart';
+import 'package:nasbeat/services/local_music_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:icons_plus/icons_plus.dart';
@@ -287,8 +287,8 @@ class _LocalMusicScreenState extends State<LocalMusicScreen> {
                   icon: MingCute.shuffle_line,
                   label: AppLocalizations.of(context)!.localMusicShuffle,
                   onTap: () => context
-                      .read<BloomeePlayerCubit>()
-                      .bloomeePlayer
+                      .read<NasBeatPlayerCubit>()
+                      .nasbeatPlayer
                       .loadPlaylist(
                         Playlist(tracks: displayedTracks, title: 'Local Music'),
                         doPlay: true,
@@ -300,8 +300,8 @@ class _LocalMusicScreenState extends State<LocalMusicScreen> {
                   icon: MingCute.play_fill,
                   label: AppLocalizations.of(context)!.localMusicPlayAll,
                   onTap: () => context
-                      .read<BloomeePlayerCubit>()
-                      .bloomeePlayer
+                      .read<NasBeatPlayerCubit>()
+                      .nasbeatPlayer
                       .loadPlaylist(
                         Playlist(tracks: displayedTracks, title: 'Local Music'),
                         doPlay: true,
@@ -383,7 +383,7 @@ class _LocalMusicScreenState extends State<LocalMusicScreen> {
                 song: track,
                 showOptions: true,
                 onTap: () {
-                  context.read<BloomeePlayerCubit>().bloomeePlayer.loadPlaylist(
+                  context.read<NasBeatPlayerCubit>().nasbeatPlayer.loadPlaylist(
                         Playlist(tracks: displayedTracks, title: 'Local Music'),
                         idx: index,
                         doPlay: true,
@@ -639,7 +639,7 @@ class _DeleteConfirmDialogState extends State<_DeleteConfirmDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return BloomeeDialogSurface(
+    return NasBeatDialogSurface(
       title: AppLocalizations.of(context)!.dialogDeleteTrack,
       subtitle: AppLocalizations.of(context)!
           .dialogDeleteTrackMessage(widget.trackTitle),

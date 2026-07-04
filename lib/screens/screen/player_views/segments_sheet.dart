@@ -1,11 +1,11 @@
 import 'dart:developer';
 
-import 'package:Bloomee/core/di/service_locator.dart';
-import 'package:Bloomee/core/theme/app_theme.dart';
-import 'package:Bloomee/l10n/app_localizations.dart';
-import 'package:Bloomee/src/rust/api/plugin/commands.dart';
-import 'package:Bloomee/src/rust/api/plugin/models.dart';
-import 'package:Bloomee/src/rust/api/plugin/types.dart';
+import 'package:nasbeat/core/di/service_locator.dart';
+import 'package:nasbeat/core/theme/app_theme.dart';
+import 'package:nasbeat/l10n/app_localizations.dart';
+import 'package:nasbeat/src/rust/api/plugin/commands.dart';
+import 'package:nasbeat/src/rust/api/plugin/models.dart';
+import 'package:nasbeat/src/rust/api/plugin/types.dart';
 import 'package:flutter/material.dart';
 import 'package:icons_plus/icons_plus.dart';
 

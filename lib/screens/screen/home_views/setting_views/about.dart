@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:Bloomee/l10n/app_localizations.dart';
+import 'package:nasbeat/l10n/app_localizations.dart';
 import 'package:icons_plus/icons_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -126,7 +126,7 @@ class About extends StatelessWidget {
                       spacing: 6,
                       children: [
                         Text(
-                          'BloomeeTunes',
+                          'NasBeat',
                           style: TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
@@ -177,7 +177,7 @@ class About extends StatelessWidget {
                     const SizedBox(width: 12),
                     Flexible(
                       child: Text(
-                        '@iamhemantindia',
+                        '@nastechai',
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: kPrimaryTextColor,
@@ -213,7 +213,7 @@ class About extends StatelessWidget {
                       text: 'Maintainer',
                       tooltip: l10n.aboutFollowGitHub,
                       onTap: () {
-                        launchUrl(Uri.parse('https://github.com/HemantKArya'),
+                        launchUrl(Uri.parse('https://github.com/nastechai'),
                             mode: LaunchMode.externalApplication);
                       }),
                   // Short label 'Email' opens mail composer
@@ -223,7 +223,7 @@ class About extends StatelessWidget {
                       tooltip: l10n.aboutSendInquiry,
                       onTap: () {
                         launchUrl(
-                          Uri.parse('https://x.com/iamhemantindia'),
+                          Uri.parse('https://x.com/nastechai'),
                           mode: LaunchMode.externalApplication,
                         );
                       }),
@@ -234,7 +234,7 @@ class About extends StatelessWidget {
                       tooltip: l10n.aboutCreativeHighlights,
                       onTap: () {
                         launchUrl(
-                            Uri.parse('https://linkedin.com/in/iamhemantindia'),
+                            Uri.parse('https://linkedin.com/in/nastechai'),
                             mode: LaunchMode.externalApplication);
                       }),
                 ],
@@ -280,7 +280,7 @@ class About extends StatelessWidget {
               borderRadius: BorderRadius.circular(32.0),
               onTap: () {
                 launchUrl(
-                  Uri.parse("https://hemantkarya.github.io/BloomeeTunes/"),
+                  Uri.parse("https://nasbeat.nastechai.com"),
                   mode: LaunchMode.externalApplication,
                 );
               },
@@ -337,7 +337,7 @@ class About extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
               onTap: () {
                 launchUrl(
-                    Uri.parse("https://hemantkarya.github.io/BloomeeTunes/"),
+                    Uri.parse("https://nasbeat.nastechai.com"),
                     mode: LaunchMode.externalApplication);
               },
               child: Row(
@@ -680,7 +680,7 @@ class _GentleRotatingFlowerState extends State<GentleRotatingFlower>
             child: Transform.scale(
               scale: scale,
               child: Text(
-                "🌸",
+                "𒆜",
                 style: TextStyle(fontSize: widget.size),
               ),
             ),

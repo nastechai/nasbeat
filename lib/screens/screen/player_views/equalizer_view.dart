@@ -1,12 +1,12 @@
 import 'dart:async';
 
-import 'package:Bloomee/blocs/media_player/bloomee_player_cubit.dart';
-import 'package:Bloomee/blocs/settings_cubit/cubit/settings_cubit.dart';
-import 'package:Bloomee/core/constants/setting_keys.dart';
-import 'package:Bloomee/core/theme/app_theme.dart';
-import 'package:Bloomee/l10n/app_localizations.dart';
-import 'package:Bloomee/screens/screen/home_views/setting_views/custom_switch.dart';
-import 'package:Bloomee/services/player/player_engine.dart';
+import 'package:nasbeat/blocs/media_player/nasbeat_player_cubit.dart';
+import 'package:nasbeat/blocs/settings_cubit/cubit/settings_cubit.dart';
+import 'package:nasbeat/core/constants/setting_keys.dart';
+import 'package:nasbeat/core/theme/app_theme.dart';
+import 'package:nasbeat/l10n/app_localizations.dart';
+import 'package:nasbeat/screens/screen/home_views/setting_views/custom_switch.dart';
+import 'package:nasbeat/services/player/player_engine.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -71,14 +71,14 @@ class _EqualizerViewState extends State<EqualizerView>
   bool _isGraphInteractive = false;
 
   // FIX L-01: Reactive subscriptions so the view stays in sync with engine state
-  // changes from external code (settings restore, revive, Bloomee settings page).
+  // changes from external code (settings restore, revive, NasBeat settings page).
   StreamSubscription? _eqEnabledSub;
   StreamSubscription? _eqGainsSub;
 
   @override
   void initState() {
     super.initState();
-    _engine = context.read<BloomeePlayerCubit>().bloomeePlayer.engine;
+    _engine = context.read<NasBeatPlayerCubit>().nasbeatPlayer.engine;
     _settingsCubit = context.read<SettingsCubit>();
 
     _eqSource = _settingsCubit.state.eqSource;
@@ -426,7 +426,7 @@ class _EqualizerViewState extends State<EqualizerView>
                                             .withValues(alpha: 0.95),
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600)),
-                                BloomeeSwitch(
+                                NasBeatSwitch(
                                   value: isEnabled,
                                   onChanged: () {
                                     _engine.setEqualizerEnabled(!isEnabled);

@@ -1,6 +1,6 @@
-import 'package:Bloomee/repository/LastFM/lastfmapi.dart';
-import 'package:Bloomee/services/db/dao/settings_dao.dart';
-import 'package:Bloomee/core/constants/cache_keys.dart';
+import 'package:nasbeat/repository/LastFM/lastfmapi.dart';
+import 'package:nasbeat/services/db/dao/settings_dao.dart';
+import 'package:nasbeat/core/constants/cache_keys.dart';
 
 /// Repository for Last.fm scrobbling operations.
 ///

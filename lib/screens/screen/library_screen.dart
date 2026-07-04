@@ -1,30 +1,30 @@
 import 'dart:ui';
 
-import 'package:Bloomee/blocs/media_player/bloomee_player_cubit.dart';
-import 'package:Bloomee/plugins/blocs/import/content_import_cubit.dart';
-import 'package:Bloomee/plugins/blocs/import/content_import_state.dart';
-import 'package:Bloomee/core/models/media_playlist_model.dart';
-import 'package:Bloomee/screens/screen/library_views/more_opts_sheet.dart';
-import 'package:Bloomee/screens/screen/common_views/album_view.dart';
-import 'package:Bloomee/screens/screen/common_views/artist_view.dart';
-import 'package:Bloomee/screens/screen/common_views/playlist_view.dart';
-import 'package:Bloomee/screens/widgets/more_bottom_sheet.dart';
-import 'package:Bloomee/screens/widgets/sign_board_widget.dart';
-import 'package:Bloomee/screens/widgets/song_tile.dart';
-import 'package:Bloomee/plugins/utils/media_id.dart';
+import 'package:nasbeat/blocs/media_player/nasbeat_player_cubit.dart';
+import 'package:nasbeat/plugins/blocs/import/content_import_cubit.dart';
+import 'package:nasbeat/plugins/blocs/import/content_import_state.dart';
+import 'package:nasbeat/core/models/media_playlist_model.dart';
+import 'package:nasbeat/screens/screen/library_views/more_opts_sheet.dart';
+import 'package:nasbeat/screens/screen/common_views/album_view.dart';
+import 'package:nasbeat/screens/screen/common_views/artist_view.dart';
+import 'package:nasbeat/screens/screen/common_views/playlist_view.dart';
+import 'package:nasbeat/screens/widgets/more_bottom_sheet.dart';
+import 'package:nasbeat/screens/widgets/sign_board_widget.dart';
+import 'package:nasbeat/screens/widgets/song_tile.dart';
+import 'package:nasbeat/plugins/utils/media_id.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:Bloomee/blocs/library/cubit/library_items_cubit.dart';
-import 'package:Bloomee/core/constants/route_paths.dart';
-import 'package:Bloomee/screens/widgets/create_playlist_bottomsheet.dart';
-import 'package:Bloomee/screens/widgets/libitem_tile.dart';
-import 'package:Bloomee/core/theme/app_theme.dart';
-import 'package:Bloomee/l10n/app_localizations.dart';
+import 'package:nasbeat/blocs/library/cubit/library_items_cubit.dart';
+import 'package:nasbeat/core/constants/route_paths.dart';
+import 'package:nasbeat/screens/widgets/create_playlist_bottomsheet.dart';
+import 'package:nasbeat/screens/widgets/libitem_tile.dart';
+import 'package:nasbeat/core/theme/app_theme.dart';
+import 'package:nasbeat/l10n/app_localizations.dart';
 import 'package:icons_plus/icons_plus.dart';
-import 'package:Bloomee/blocs/library/search_cubit/library_search_cubit.dart';
-import 'package:Bloomee/core/models/library_search_result.dart';
-import 'package:Bloomee/screens/widgets/animated_list_item.dart';
+import 'package:nasbeat/blocs/library/search_cubit/library_search_cubit.dart';
+import 'package:nasbeat/core/models/library_search_result.dart';
+import 'package:nasbeat/screens/widgets/animated_list_item.dart';
 
 class LibraryScreen extends StatelessWidget {
   const LibraryScreen({super.key});
@@ -371,7 +371,7 @@ class _LibraryScreenViewState extends State<_LibraryScreenView> {
                 if (playlist != null && context.mounted) {
                   final songIdx =
                       playlist.tracks.indexWhere((s) => s.id == result.song.id);
-                  context.read<BloomeePlayerCubit>().bloomeePlayer.loadPlaylist(
+                  context.read<NasBeatPlayerCubit>().nasbeatPlayer.loadPlaylist(
                         playlist,
                         idx: songIdx >= 0 ? songIdx : 0,
                         doPlay: true,

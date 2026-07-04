@@ -1,5 +1,5 @@
-import 'package:Bloomee/core/models/exported.dart';
-import 'package:Bloomee/services/db/global_db.dart';
+import 'package:nasbeat/core/models/exported.dart';
+import 'package:nasbeat/services/db/global_db.dart';
 
 /// Maps between [TrackDB] (Isar entity) and [Track] (plugin domain model).
 ///

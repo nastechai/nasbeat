@@ -1,8 +1,8 @@
 import 'dart:developer';
 
-import 'package:Bloomee/core/constants/setting_keys.dart';
-import 'package:Bloomee/services/bloomee_updater_tools.dart';
-import 'package:Bloomee/services/db/dao/settings_dao.dart';
+import 'package:nasbeat/core/constants/setting_keys.dart';
+import 'package:nasbeat/services/nasbeat_updater_tools.dart';
+import 'package:nasbeat/services/db/dao/settings_dao.dart';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 
@@ -31,7 +31,7 @@ class GlobalEventsCubit extends Cubit<GlobalEventsState> {
         emit(UpdateAvailable(
           newVersion: updates["newVer"],
           newBuild: updates["newBuild"],
-          downloadUrl: "https://bloomee.sourceforge.io/",
+          downloadUrl: "https://nasbeat.sourceforge.io/",
         ));
       }
     }

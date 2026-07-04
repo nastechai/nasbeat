@@ -1,16 +1,16 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
-import 'package:Bloomee/blocs/media_player/bloomee_player_cubit.dart';
-import 'package:Bloomee/core/models/exported.dart';
-import 'package:Bloomee/core/constants/sentinel_values.dart';
-import 'package:Bloomee/repository/LastFM/lastfmapi.dart';
-import 'package:Bloomee/core/constants/cache_keys.dart';
-import 'package:Bloomee/services/db/dao/cache_dao.dart';
-import 'package:Bloomee/services/db/dao/settings_dao.dart';
-import 'package:Bloomee/services/meta_resolver/chart_item_resolver.dart';
-import 'package:Bloomee/services/meta_resolver/cross_plugin_resolver.dart';
-import 'package:Bloomee/services/plugin/plugin_service.dart';
+import 'package:nasbeat/blocs/media_player/nasbeat_player_cubit.dart';
+import 'package:nasbeat/core/models/exported.dart';
+import 'package:nasbeat/core/constants/sentinel_values.dart';
+import 'package:nasbeat/repository/LastFM/lastfmapi.dart';
+import 'package:nasbeat/core/constants/cache_keys.dart';
+import 'package:nasbeat/services/db/dao/cache_dao.dart';
+import 'package:nasbeat/services/db/dao/settings_dao.dart';
+import 'package:nasbeat/services/meta_resolver/chart_item_resolver.dart';
+import 'package:nasbeat/services/meta_resolver/cross_plugin_resolver.dart';
+import 'package:nasbeat/services/plugin/plugin_service.dart';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -20,7 +20,7 @@ part 'lastdotfm_state.dart';
 class LastdotfmCubit extends Cubit<LastdotfmState> {
   LastFmAPI lastFmAPI = LastFmAPI();
   StreamSubscription? _progressSub;
-  BloomeePlayerCubit playerCubit;
+  NasBeatPlayerCubit playerCubit;
   final CacheDAO _cacheDao;
   final SettingsDAO _settingsDao;
   final PluginService _pluginService;
@@ -68,7 +68,7 @@ class LastdotfmCubit extends Cubit<LastdotfmState> {
   }
 
   void _onProgressTick() {
-    final player = playerCubit.bloomeePlayer;
+    final player = playerCubit.nasbeatPlayer;
     final current = player.currentMedia;
     final isPlaying = player.engine.playing;
 

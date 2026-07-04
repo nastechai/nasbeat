@@ -1,12 +1,12 @@
 import 'dart:convert';
 import 'dart:developer';
 
-import 'package:Bloomee/core/constants/setting_keys.dart';
-import 'package:Bloomee/services/db/dao/settings_dao.dart';
-import 'package:Bloomee/services/db/dao/track_dao.dart';
-import 'package:Bloomee/services/db/db_provider.dart';
-import 'package:Bloomee/core/models/exported.dart';
-import 'package:Bloomee/services/player/player_engine.dart';
+import 'package:nasbeat/core/constants/setting_keys.dart';
+import 'package:nasbeat/services/db/dao/settings_dao.dart';
+import 'package:nasbeat/services/db/dao/track_dao.dart';
+import 'package:nasbeat/services/db/db_provider.dart';
+import 'package:nasbeat/core/models/exported.dart';
+import 'package:nasbeat/services/player/player_engine.dart';
 import 'package:rxdart/rxdart.dart';
 
 List<int> generateRandomIndices(int length) {
@@ -18,7 +18,7 @@ List<int> generateRandomIndices(int length) {
 /// Manages the playback queue (track list, ordering, shuffle, navigation).
 ///
 /// Pure data structure — does NOT control the audio engine.
-/// The [BloomeeMusicPlayer] reads [currentTrack] after calling navigation
+/// The [NasBeatMusicPlayer] reads [currentTrack] after calling navigation
 /// methods and decides what to play.
 class QueueManager {
   final BehaviorSubject<List<Track>> _queue = BehaviorSubject.seeded([]);
@@ -30,7 +30,7 @@ class QueueManager {
   List<int> _shuffleList = [];
 
   /// True while [restoreQueueState] is populating the queue from disk.
-  /// [BloomeeMusicPlayer] checks this to skip the persistence listener
+  /// [NasBeatMusicPlayer] checks this to skip the persistence listener
   /// and avoid writing back the exact same data we just read.
   bool _isRestoring = false;
   bool get isRestoring => _isRestoring;
@@ -454,7 +454,7 @@ class QueueManager {
   /// TrackDAO from the normal play/add pipeline. This avoids fragile custom
   /// serialization and keeps the persisted payload tiny.
   ///
-  /// Called from [BloomeeMusicPlayer] via a throttled listener on
+  /// Called from [NasBeatMusicPlayer] via a throttled listener on
   /// [tracksStream], and eagerly in [onTaskRemoved] as a last-chance save.
   Future<void> persistQueueState() async {
     final tracks = _queue.value;

@@ -1,12 +1,12 @@
-import 'package:Bloomee/core/constants/setting_keys.dart';
-import 'package:Bloomee/core/theme/app_theme.dart';
-import 'package:Bloomee/l10n/app_localizations.dart';
-import 'package:Bloomee/l10n/language_options.dart';
-import 'package:Bloomee/screens/screen/home_views/setting_views/country_setting.dart';
-import 'package:Bloomee/services/db/dao/settings_dao.dart';
-import 'package:Bloomee/services/db/db_provider.dart';
-import 'package:Bloomee/services/onboarding_service.dart';
-import 'package:Bloomee/utils/country_info.dart';
+import 'package:nasbeat/core/constants/setting_keys.dart';
+import 'package:nasbeat/core/theme/app_theme.dart';
+import 'package:nasbeat/l10n/app_localizations.dart';
+import 'package:nasbeat/l10n/language_options.dart';
+import 'package:nasbeat/screens/screen/home_views/setting_views/country_setting.dart';
+import 'package:nasbeat/services/db/dao/settings_dao.dart';
+import 'package:nasbeat/services/db/db_provider.dart';
+import 'package:nasbeat/services/onboarding_service.dart';
+import 'package:nasbeat/utils/country_info.dart';
 import 'package:flutter/material.dart';
 import 'package:icons_plus/icons_plus.dart';
 

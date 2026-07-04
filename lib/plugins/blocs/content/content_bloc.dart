@@ -4,17 +4,17 @@ import 'dart:developer';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rxdart/rxdart.dart';
 
-import 'package:Bloomee/core/di/service_locator.dart';
-import 'package:Bloomee/core/events/global_event_bus.dart';
-import 'package:Bloomee/core/models/exported.dart';
-import 'package:Bloomee/plugins/blocs/content/content_event.dart';
-import 'package:Bloomee/plugins/blocs/content/content_state.dart';
-import 'package:Bloomee/plugins/errors/plugin_exceptions.dart';
-import 'package:Bloomee/services/cache/plugin_cache_repository.dart';
-import 'package:Bloomee/services/plugin/plugin_service.dart';
-import 'package:Bloomee/plugins/utils/media_id.dart';
-import 'package:Bloomee/services/plugin_cache_codec.dart';
-import 'package:Bloomee/src/rust/api/plugin/commands.dart';
+import 'package:nasbeat/core/di/service_locator.dart';
+import 'package:nasbeat/core/events/global_event_bus.dart';
+import 'package:nasbeat/core/models/exported.dart';
+import 'package:nasbeat/plugins/blocs/content/content_event.dart';
+import 'package:nasbeat/plugins/blocs/content/content_state.dart';
+import 'package:nasbeat/plugins/errors/plugin_exceptions.dart';
+import 'package:nasbeat/services/cache/plugin_cache_repository.dart';
+import 'package:nasbeat/services/plugin/plugin_service.dart';
+import 'package:nasbeat/plugins/utils/media_id.dart';
+import 'package:nasbeat/services/plugin_cache_codec.dart';
+import 'package:nasbeat/src/rust/api/plugin/commands.dart';
 
 /// Handles content resolution: search, album/artist/playlist details,
 /// stream URLs, home sections.

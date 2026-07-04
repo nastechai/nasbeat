@@ -1,12 +1,12 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
-import 'package:Bloomee/blocs/media_player/bloomee_player_cubit.dart';
-import 'package:Bloomee/blocs/settings_cubit/cubit/settings_cubit.dart';
-import 'package:Bloomee/core/theme/app_theme.dart';
-import 'package:Bloomee/screens/screen/home_views/setting_views/setting_shared_widgets.dart';
-import 'package:Bloomee/screens/screen/player_views/equalizer_view.dart';
+import 'package:nasbeat/blocs/media_player/nasbeat_player_cubit.dart';
+import 'package:nasbeat/blocs/settings_cubit/cubit/settings_cubit.dart';
+import 'package:nasbeat/core/theme/app_theme.dart';
+import 'package:nasbeat/screens/screen/home_views/setting_views/setting_shared_widgets.dart';
+import 'package:nasbeat/screens/screen/player_views/equalizer_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:Bloomee/l10n/app_localizations.dart';
+import 'package:nasbeat/l10n/app_localizations.dart';
 import 'package:icons_plus/icons_plus.dart';
 
 class PlayerSettings extends StatelessWidget {
@@ -109,8 +109,8 @@ class PlayerSettings extends StatelessWidget {
                     onChanged: (v) {
                       context.read<SettingsCubit>().setCrossfadeDuration(v);
                       context
-                          .read<BloomeePlayerCubit>()
-                          .bloomeePlayer
+                          .read<NasBeatPlayerCubit>()
+                          .nasbeatPlayer
                           .setCrossfadeDuration(Duration(seconds: v));
                     },
                   ),
