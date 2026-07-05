@@ -2,7 +2,16 @@ name: "Build Android"
 
 on:
   workflow_dispatch:
+    inputs:
+      prerelease:
+        description: 'Publish as pre-release?'
+        type: boolean
+        default: true
   workflow_call:
+    inputs:
+      prerelease:
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -77,34 +86,35 @@ jobs:
       - name: Rename APK files
         run: |
           mv build/app/outputs/flutter-apk/app-release.apk \
-             build/app/outputs/flutter-apk/nasbeat_android_v${{ env.VERSION }}+${{ github.run_number }}_universal.apk
+             build/app/outputs/flutter-apk/Nasbeat-v${{ env.VERSION }}-Android-universal.apk
           mv build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk \
-             build/app/outputs/flutter-apk/nasbeat_android_v${{ env.VERSION }}+${{ github.run_number }}_armeabi-v7a.apk
+             build/app/outputs/flutter-apk/Nasbeat-v${{ env.VERSION }}-Android-armeabi-v7a.apk
           mv build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
-             build/app/outputs/flutter-apk/nasbeat_android_v${{ env.VERSION }}+${{ github.run_number }}_arm64-v8a.apk
+             build/app/outputs/flutter-apk/Nasbeat-v${{ env.VERSION }}-Android-arm64-v8a.apk
           mv build/app/outputs/flutter-apk/app-x86_64-release.apk \
-             build/app/outputs/flutter-apk/nasbeat_android_v${{ env.VERSION }}+${{ github.run_number }}_x86_64.apk
+             build/app/outputs/flutter-apk/Nasbeat-v${{ env.VERSION }}-Android-x86_64.apk
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Release-Android
+          name: Nasbeat-v${{ env.VERSION }}-Android
           path: |
-            build/app/outputs/flutter-apk/nasbeat_android_v${{ env.VERSION }}+${{ github.run_number }}_universal.apk
-            build/app/outputs/flutter-apk/nasbeat_android_v${{ env.VERSION }}+${{ github.run_number }}_armeabi-v7a.apk
-            build/app/outputs/flutter-apk/nasbeat_android_v${{ env.VERSION }}+${{ github.run_number }}_arm64-v8a.apk
-            build/app/outputs/flutter-apk/nasbeat_android_v${{ env.VERSION }}+${{ github.run_number }}_x86_64.apk
+            build/app/outputs/flutter-apk/Nasbeat-v${{ env.VERSION }}-Android-universal.apk
+            build/app/outputs/flutter-apk/Nasbeat-v${{ env.VERSION }}-Android-armeabi-v7a.apk
+            build/app/outputs/flutter-apk/Nasbeat-v${{ env.VERSION }}-Android-arm64-v8a.apk
+            build/app/outputs/flutter-apk/Nasbeat-v${{ env.VERSION }}-Android-x86_64.apk
 
       - name: Publish to Release
         uses: ncipollo/release-action@v1
         with:
           artifacts: |
-            build/app/outputs/flutter-apk/nasbeat_android_v${{ env.VERSION }}+${{ github.run_number }}_universal.apk
-            build/app/outputs/flutter-apk/nasbeat_android_v${{ env.VERSION }}+${{ github.run_number }}_armeabi-v7a.apk
-            build/app/outputs/flutter-apk/nasbeat_android_v${{ env.VERSION }}+${{ github.run_number }}_arm64-v8a.apk
-            build/app/outputs/flutter-apk/nasbeat_android_v${{ env.VERSION }}+${{ github.run_number }}_x86_64.apk
-          tag: v${{ env.VERSION }}+${{ github.run_number }}
+            build/app/outputs/flutter-apk/Nasbeat-v${{ env.VERSION }}-Android-universal.apk
+            build/app/outputs/flutter-apk/Nasbeat-v${{ env.VERSION }}-Android-armeabi-v7a.apk
+            build/app/outputs/flutter-apk/Nasbeat-v${{ env.VERSION }}-Android-arm64-v8a.apk
+            build/app/outputs/flutter-apk/Nasbeat-v${{ env.VERSION }}-Android-x86_64.apk
+          tag: v${{ env.VERSION }}
+          name: "Nasbeat v${{ env.VERSION }}"
           token: ${{ secrets.GITHUB_TOKEN }}
-          prerelease: true
+          prerelease: ${{ inputs.prerelease }}
           allowUpdates: true
           omitBodyDuringUpdate: true
