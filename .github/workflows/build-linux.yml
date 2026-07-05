@@ -2,7 +2,16 @@ name: "Build Linux"
 
 on:
   workflow_dispatch:
+    inputs:
+      prerelease:
+        description: 'Publish as pre-release?'
+        type: boolean
+        default: true
   workflow_call:
+    inputs:
+      prerelease:
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -47,20 +56,21 @@ jobs:
 
       - name: Compress Linux Build
         run: |
-          tar -czf nasbeat_linux_x64_v${{ env.VERSION }}+${{ github.run_number }}.tar.gz -C build/linux/x64/release/bundle .
+          tar -czf "Nasbeat-v${{ env.VERSION }}-Linux-x64.tar.gz" -C build/linux/x64/release/bundle .
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Release-Linux
-          path: nasbeat_linux_x64_v${{ env.VERSION }}+${{ github.run_number }}.tar.gz
+          name: Nasbeat-v${{ env.VERSION }}-Linux-x64
+          path: Nasbeat-v${{ env.VERSION }}-Linux-x64.tar.gz
 
       - name: Publish to Release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: nasbeat_linux_x64_v${{ env.VERSION }}+${{ github.run_number }}.tar.gz
-          tag: v${{ env.VERSION }}+${{ github.run_number }}
+          artifacts: Nasbeat-v${{ env.VERSION }}-Linux-x64.tar.gz
+          tag: v${{ env.VERSION }}
+          name: "Nasbeat v${{ env.VERSION }}"
           token: ${{ secrets.GITHUB_TOKEN }}
-          prerelease: true
+          prerelease: ${{ inputs.prerelease }}
           allowUpdates: true
           omitBodyDuringUpdate: true
