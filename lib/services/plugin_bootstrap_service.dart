@@ -123,7 +123,7 @@ class PluginBootstrapService {
       return PluginBootstrapResult(
         success: false,
         errors: errors,
-        failureReason: _isOfflineError(e)
+        failureReason: await _isOfflineError(e)
             ? PluginBootstrapFailureReason.noInternet
             : PluginBootstrapFailureReason.setupFailed,
       );
@@ -642,7 +642,20 @@ class PluginBootstrapService {
     }
   }
 
-  static bool _isOfflineError(Object error) {
-    return error is SocketException || error is TimeoutException;
+  /// Returns true only when the device genuinely has no internet access.
+  /// A [SocketException] caused by an unreachable *server* (DNS failure for
+  /// our own domain) should NOT block the user — so we verify connectivity
+  /// by probing a well-known reliable host before deciding.
+  static Future<bool> _isOfflineError(Object error) async {
+    if (error is! SocketException && error is! TimeoutException) {
+      return false;
+    }
+    try {
+      final result = await InternetAddress.lookup('google.com')
+          .timeout(const Duration(seconds: 5));
+      return result.isEmpty || result[0].rawAddress.isEmpty;
+    } catch (_) {
+      return true;
+    }
   }
 }
