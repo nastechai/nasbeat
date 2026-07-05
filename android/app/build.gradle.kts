@@ -55,22 +55,13 @@ android {
             val keystoreProperties = Properties()
             keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 
-            val keystorePath = keystoreProperties["storeFile"] as String?
             val keyAliasValue = keystoreProperties["keyAlias"] as String?
-
-            println("   Keystore file path: $keystorePath")
             println("   Key alias: $keyAliasValue")
-
-            if (keystorePath != null) {
-                val keystoreFile = file(keystorePath)
-                println("   Keystore file exists: ${keystoreFile.exists()}")
-                println("   Keystore file path: ${keystoreFile.absolutePath}")
-            }
 
             create("release") {
                 keyAlias = keystoreProperties["keyAlias"] as String?
                 keyPassword = keystoreProperties["keyPassword"] as String?
-                storeFile = rootProject.file(keystorePath)
+                storeFile = rootProject.file("nasbeat.jks")
                 storePassword = keystoreProperties["storePassword"] as String?
                 println("   ✅ Release signing config created successfully")
             }
