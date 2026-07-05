@@ -1,0 +1,65 @@
+name: "Build Windows"
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust Dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "rust"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.4'
+          channel: 'stable'
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Extract version from pubspec.yaml
+        shell: powershell
+        run: |
+          $vLine = Select-String -Path pubspec.yaml -Pattern '^version:\s*(\S+)' | Select-Object -First 1
+          if (-not $vLine) { Write-Error 'version not found in pubspec.yaml'; exit 1 }
+          $ver = $vLine.Matches[0].Groups[1].Value.Split('+')[0]
+          echo "VERSION=$ver" >> $env:GITHUB_ENV
+
+      - name: Build Windows App
+        run: flutter build windows --release --build-number ${{ github.run_number }}
+
+      - name: Zip Windows Build
+        shell: powershell
+        run: |
+          Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath nasbeat_windows_x64_v$env:VERSION+${{ github.run_number }}.zip
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Release-Windows
+          path: nasbeat_windows_x64_v${{ env.VERSION }}+${{ github.run_number }}.zip
+
+      - name: Publish to Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: nasbeat_windows_x64_v${{ env.VERSION }}+${{ github.run_number }}.zip
+          tag: v${{ env.VERSION }}+${{ github.run_number }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          prerelease: true
+          allowUpdates: true
+          omitBodyDuringUpdate: true
