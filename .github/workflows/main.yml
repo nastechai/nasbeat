@@ -2,19 +2,30 @@ name: "Build & Release All"
 
 on:
   workflow_dispatch:
+    inputs:
+      prerelease:
+        description: 'Publish as pre-release?'
+        type: boolean
+        default: true
 
 jobs:
   android:
     name: Android
     uses: ./.github/workflows/build-android.yml
+    with:
+      prerelease: ${{ inputs.prerelease }}
     secrets: inherit
 
   windows:
     name: Windows
     uses: ./.github/workflows/build-windows.yml
+    with:
+      prerelease: ${{ inputs.prerelease }}
     secrets: inherit
 
   linux:
     name: Linux
     uses: ./.github/workflows/build-linux.yml
+    with:
+      prerelease: ${{ inputs.prerelease }}
     secrets: inherit
