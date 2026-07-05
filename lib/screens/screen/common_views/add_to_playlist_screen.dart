@@ -13,7 +13,7 @@ import 'package:nasbeat/screens/widgets/create_playlist_bottomsheet.dart';
 import 'package:nasbeat/core/theme/app_theme.dart';
 import 'package:nasbeat/l10n/app_localizations.dart';
 import 'package:nasbeat/utils/load_image.dart';
-import 'package:icons_plus/icons_plus.dart';
+import 'package:icons_plus_pro/icons_plus_pro.dart';
 
 class AddToPlaylistScreen extends StatefulWidget {
   const AddToPlaylistScreen({super.key});

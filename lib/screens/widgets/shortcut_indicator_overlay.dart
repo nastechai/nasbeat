@@ -3,7 +3,7 @@ import 'package:nasbeat/services/shortcut_indicator_service.dart';
 import 'package:nasbeat/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:icons_plus/icons_plus.dart';
+import 'package:icons_plus_pro/icons_plus_pro.dart';
 import 'package:nasbeat/services/player/player_engine.dart';
 
 class ShortcutIndicatorOverlay extends StatelessWidget {

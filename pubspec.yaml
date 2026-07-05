@@ -20,7 +20,10 @@ dependencies:
 
   device_info_plus: ^12.1.0
   equatable: ^2.0.7
-  icons_plus: ^5.0.0
+  icons_plus_pro:
+    git:
+      url: https://github.com/xwork1/icons_plus_pro
+      ref: master
   cached_network_image: ^3.4.1
   flutter_bloc: ^9.1.1
   bloc: ^9.0.0
@@ -85,7 +88,6 @@ dependencies:
 
 dependency_overrides:
   ffi: ^1.1.2  # Override to make dart_discord_rpc work
-  async: 2.11.0  # Pin to satisfy integration_test from Flutter 3.27.4 SDK
 
 
 dev_dependencies:

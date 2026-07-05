@@ -8,7 +8,7 @@ import 'package:nasbeat/services/local_music_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:icons_plus/icons_plus.dart';
+import 'package:icons_plus_pro/icons_plus_pro.dart';
 import 'package:path/path.dart' as p;
 
 class LocalMusicSettings extends StatefulWidget {

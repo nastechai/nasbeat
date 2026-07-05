@@ -25,7 +25,7 @@ import 'package:nasbeat/screens/screen/home_views/timer_view.dart';
 import 'package:nasbeat/core/theme/app_theme.dart';
 import 'package:nasbeat/l10n/app_localizations.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:icons_plus/icons_plus.dart';
+import 'package:icons_plus_pro/icons_plus_pro.dart';
 import 'chart/carousal_widget.dart';
 import '../widgets/horizontal_card_view.dart';
 import '../widgets/tab_list_widget.dart';

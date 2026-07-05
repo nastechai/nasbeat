@@ -12,7 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:nasbeat/core/theme/app_theme.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nasbeat/l10n/app_localizations.dart';
-import 'package:icons_plus/icons_plus.dart';
+import 'package:icons_plus_pro/icons_plus_pro.dart';
 
 class AppUISettings extends StatefulWidget {
   const AppUISettings({super.key});

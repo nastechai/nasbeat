@@ -7,7 +7,7 @@ import 'package:nasbeat/screens/widgets/song_tile.dart';
 import 'package:nasbeat/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:icons_plus/icons_plus.dart';
+import 'package:icons_plus_pro/icons_plus_pro.dart';
 
 class PlaylistEditView extends StatefulWidget {
   const PlaylistEditView({super.key});

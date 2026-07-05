@@ -16,7 +16,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nasbeat/l10n/app_localizations.dart';
-import 'package:icons_plus/icons_plus.dart';
+import 'package:icons_plus_pro/icons_plus_pro.dart';
 import 'package:nasbeat/screens/screen/home_views/plugin_repository_view.dart';
 import 'package:nasbeat/plugins/blocs/repository/plugin_repository_cubit.dart';
 import 'package:nasbeat/plugins/utils/plugin_constants.dart';

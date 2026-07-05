@@ -2,7 +2,7 @@
 import 'package:nasbeat/core/theme/app_theme.dart';
 import 'package:nasbeat/src/rust/api/plugin/models.dart';
 import 'package:flutter/material.dart';
-import 'package:icons_plus/icons_plus.dart';
+import 'package:icons_plus_pro/icons_plus_pro.dart';
 import 'package:nasbeat/utils/load_image.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 

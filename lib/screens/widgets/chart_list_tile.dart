@@ -5,7 +5,7 @@ import 'package:nasbeat/core/models/exported.dart';
 import 'package:nasbeat/screens/screen/chart/chart_view.dart';
 import 'package:nasbeat/utils/load_image.dart';
 import 'package:nasbeat/core/theme/app_theme.dart';
-import 'package:icons_plus/icons_plus.dart';
+import 'package:icons_plus_pro/icons_plus_pro.dart';
 
 /// A rich list tile for chart items with rank, trend indicator, artwork,
 /// metadata, stats, and action buttons.

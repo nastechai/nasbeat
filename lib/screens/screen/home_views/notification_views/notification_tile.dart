@@ -4,7 +4,7 @@ import 'package:nasbeat/core/models/app_notification.dart';
 import 'package:nasbeat/screens/screen/home_views/setting_views/check_update_view.dart';
 import 'package:nasbeat/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
-import 'package:icons_plus/icons_plus.dart';
+import 'package:icons_plus_pro/icons_plus_pro.dart';
 
 class NotificationTile extends StatelessWidget {
   final AppNotification notification;

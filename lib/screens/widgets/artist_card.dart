@@ -4,7 +4,7 @@ import 'package:nasbeat/screens/screen/common_views/artist_view.dart';
 import 'package:nasbeat/core/theme/app_theme.dart';
 import 'package:nasbeat/utils/load_image.dart';
 import 'package:flutter/material.dart';
-import 'package:icons_plus/icons_plus.dart';
+import 'package:icons_plus_pro/icons_plus_pro.dart';
 
 class ArtistCard extends StatefulWidget {
   final ArtistSummary artist;

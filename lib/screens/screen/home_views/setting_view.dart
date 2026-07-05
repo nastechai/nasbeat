@@ -13,7 +13,7 @@ import 'package:nasbeat/screens/screen/plugin_manager_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:nasbeat/core/theme/app_theme.dart';
 import 'package:nasbeat/l10n/app_localizations.dart';
-import 'package:icons_plus/icons_plus.dart';
+import 'package:icons_plus_pro/icons_plus_pro.dart';
 
 class SettingsView extends StatelessWidget {
   const SettingsView({super.key});

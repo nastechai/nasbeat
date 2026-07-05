@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Required for Clipboard
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:icons_plus/icons_plus.dart';
+import 'package:icons_plus_pro/icons_plus_pro.dart';
 import 'package:nasbeat/l10n/app_localizations.dart';
 import 'package:nasbeat/core/theme/app_theme.dart';
 import 'package:nasbeat/plugins/blocs/repository/plugin_repository_cubit.dart';
