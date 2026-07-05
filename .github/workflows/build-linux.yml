@@ -1,0 +1,66 @@
+name: "Build Linux"
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust Dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "rust"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.4'
+          channel: 'stable'
+
+      - name: Install Linux Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake git ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Extract version from pubspec.yaml
+        run: |
+          VERSION=$(grep -E '^version:' pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Build Linux App
+        run: flutter build linux --release --build-number ${{ github.run_number }}
+
+      - name: Compress Linux Build
+        run: |
+          tar -czf nasbeat_linux_x64_v${{ env.VERSION }}+${{ github.run_number }}.tar.gz -C build/linux/x64/release/bundle .
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Release-Linux
+          path: nasbeat_linux_x64_v${{ env.VERSION }}+${{ github.run_number }}.tar.gz
+
+      - name: Publish to Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: nasbeat_linux_x64_v${{ env.VERSION }}+${{ github.run_number }}.tar.gz
+          tag: v${{ env.VERSION }}+${{ github.run_number }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          prerelease: true
+          allowUpdates: true
+          omitBodyDuringUpdate: true
