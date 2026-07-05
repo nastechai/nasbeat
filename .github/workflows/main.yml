@@ -2,7 +2,10 @@ name: "Build & Release"
 
 on:
   workflow_dispatch:
-    
+
+permissions:
+  contents: write
+
 jobs:
     # JOB 1: WINDOWS & ANDROID
     build-windows-android:
