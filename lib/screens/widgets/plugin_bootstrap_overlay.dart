@@ -147,7 +147,6 @@ class _PluginBootstrapOverlayState extends State<PluginBootstrapOverlay>
                         : phase == _Phase.failed
                             ? _ErrorBody(
                                 onRetry: _run,
-                                onSkip: widget.onComplete,
                               )
                             : _SpinnerBody(
                                 pulse: _pulse,
@@ -268,11 +267,9 @@ class _SpinnerBody extends StatelessWidget {
 class _ErrorBody extends StatelessWidget {
   const _ErrorBody({
     required this.onRetry,
-    required this.onSkip,
   });
 
   final VoidCallback onRetry;
-  final VoidCallback onSkip;
 
   @override
   Widget build(BuildContext context) {
@@ -336,21 +333,6 @@ class _ErrorBody extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                     fontSize: 15,
                   ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: onSkip,
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.white54,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                child: const Text(
-                  'Skip for now',
-                  style: TextStyle(fontSize: 13.5),
                 ),
               ),
             ),
