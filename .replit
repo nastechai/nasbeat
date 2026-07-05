@@ -1,4 +1,4 @@
-modules = ["rust-stable"]
+modules = ["rust-stable", "python-base-3.13"]
 [agent]
 expertMode = true
 stack = "BEST_EFFORT_FALLBACK"
