@@ -2,7 +2,16 @@ name: "Build Windows"
 
 on:
   workflow_dispatch:
+    inputs:
+      prerelease:
+        description: 'Publish as pre-release?'
+        type: boolean
+        default: true
   workflow_call:
+    inputs:
+      prerelease:
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -46,20 +55,21 @@ jobs:
       - name: Zip Windows Build
         shell: powershell
         run: |
-          Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath nasbeat_windows_x64_v$env:VERSION+${{ github.run_number }}.zip
+          Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath "Nasbeat-v$env:VERSION-Windows-x64.zip"
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Release-Windows
-          path: nasbeat_windows_x64_v${{ env.VERSION }}+${{ github.run_number }}.zip
+          name: Nasbeat-v${{ env.VERSION }}-Windows-x64
+          path: Nasbeat-v${{ env.VERSION }}-Windows-x64.zip
 
       - name: Publish to Release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: nasbeat_windows_x64_v${{ env.VERSION }}+${{ github.run_number }}.zip
-          tag: v${{ env.VERSION }}+${{ github.run_number }}
+          artifacts: Nasbeat-v${{ env.VERSION }}-Windows-x64.zip
+          tag: v${{ env.VERSION }}
+          name: "Nasbeat v${{ env.VERSION }}"
           token: ${{ secrets.GITHUB_TOKEN }}
-          prerelease: true
+          prerelease: ${{ inputs.prerelease }}
           allowUpdates: true
           omitBodyDuringUpdate: true
