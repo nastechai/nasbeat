@@ -1,6 +1,5 @@
 <div align="center">
-
-<img src="./assets/docs/nasbeattunes_new_banner.png" alt="NasBeat Banner" width="100%">
+" alt="NasBeat Banner" width="100%">
 
 # 𒆜 NasBeat 
 
