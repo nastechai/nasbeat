@@ -5,9 +5,6 @@ on:
     inputs:
       version:    { type: string,  default: '' }
       prerelease: { type: boolean, default: false }
-  workflow_run:
-    workflows: ["Build Linux"]
-    types: [completed]
 
 permissions:
   contents: write
@@ -17,9 +14,6 @@ jobs:
   publish:
     name: "Create GitHub Release"
     runs-on: ubuntu-latest
-    if: >
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
 
     steps:
       - uses: actions/checkout@v4
@@ -27,25 +21,34 @@ jobs:
           fetch-depth: 0
           ref: main
 
-      - name: Resolve version & tag
+      - name: Resolve & validate version
+        id: ver
         run: |
           if [ -n "${{ inputs.version }}" ]; then
-            echo "VERSION=${{ inputs.version }}" >> "$GITHUB_ENV"
-            echo "TAG=v${{ inputs.version }}"    >> "$GITHUB_ENV"
+            RAW="${{ inputs.version }}"
           else
-            VER=$(grep -E '^version:' pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)
-            echo "VERSION=$VER" >> "$GITHUB_ENV"
-            echo "TAG=v$VER"    >> "$GITHUB_ENV"
+            RAW=$(grep -E '^version:' pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)
           fi
 
-      # ── Test 1: Tag must exist before publishing ─────────────────
+          # ── Guard: must be numeric semver x.y.z ─────────────────
+          if ! echo "$RAW" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "❌ Version '$RAW' is not valid semver (expected x.y.z)"
+            echo "   Run Orchestrator first to bump the version properly."
+            exit 1
+          fi
+
+          echo "VERSION=${RAW}"  >> "$GITHUB_ENV"
+          echo "TAG=v${RAW}"     >> "$GITHUB_ENV"
+          echo "✅ Version: ${RAW}"
+
+      # ── Test: tag must exist ──────────────────────────────────────
       - name: Verify git tag exists
         run: |
           git fetch --tags
           if git rev-parse "${{ env.TAG }}" >/dev/null 2>&1; then
             echo "✅ Tag ${{ env.TAG }} exists"
           else
-            echo "❌ Tag ${{ env.TAG }} not found — version-bump must run first"
+            echo "❌ Tag ${{ env.TAG }} not found — run Orchestrator (main.yml) first"
             exit 1
           fi
 
@@ -56,51 +59,51 @@ jobs:
           PREV=$(git tag -l "v[0-9]*.[0-9]*.[0-9]*" | sort -V | grep -v "^${{ env.TAG }}$" | tail -1)
           DATE=$(date -u +'%Y-%m-%d')
 
-          [ -z "$PREV" ] && LOG=$(git log --format="%s|%h" HEAD 2>/dev/null | head -60) || \
-                            LOG=$(git log --format="%s|%h" "${PREV}..${{ env.TAG }}" 2>/dev/null | head -60)
+          [ -z "$PREV" ] && \
+            LOG=$(git log --format="%s|%h" HEAD 2>/dev/null | head -60) || \
+            LOG=$(git log --format="%s|%h" "${PREV}..${{ env.TAG }}" 2>/dev/null | head -60)
 
           FEATS="" FIXES="" PERF="" OTHERS=""
           while IFS='|' read -r MSG SHA; do
             [ -z "$MSG" ] && continue
+            echo "$MSG" | grep -q "\[skip ci\]" && continue
             ITEM="- ${MSG} (\`${SHA}\`)"
-            if   echo "$MSG" | grep -qiE '^feat(\(.*\))?!?:';   then FEATS="${FEATS}\n${ITEM}"
-            elif echo "$MSG" | grep -qiE '^fix(\(.*\))?!?:';    then FIXES="${FIXES}\n${ITEM}"
-            elif echo "$MSG" | grep -qiE '^perf(\(.*\))?!?:';   then PERF="${PERF}\n${ITEM}"
-            elif echo "$MSG" | grep -qiE '^\[skip ci\]'; then :
+            if   echo "$MSG" | grep -qiE '^feat(\(.*\))?!?:';  then FEATS="${FEATS}\n${ITEM}"
+            elif echo "$MSG" | grep -qiE '^fix(\(.*\))?!?:';   then FIXES="${FIXES}\n${ITEM}"
+            elif echo "$MSG" | grep -qiE '^perf(\(.*\))?!?:';  then PERF="${PERF}\n${ITEM}"
             else OTHERS="${OTHERS}\n${ITEM}"; fi
           done <<< "$LOG"
 
           {
-            echo "## Nasbeat ${{ env.TAG }}  —  ${DATE}"
+            echo "## Nasbeat ${{ env.TAG }} — ${DATE}"
             echo ""
             echo "### 📦 Downloads"
             echo "| Platform | File |"
             echo "|---|---|"
-            echo "| Android (arm64) | \`Nasbeat-v${{ env.VERSION }}-Android-arm64-v8a.apk\` |"
-            echo "| Android (armv7) | \`Nasbeat-v${{ env.VERSION }}-Android-armeabi-v7a.apk\` |"
-            echo "| Android (x86_64)| \`Nasbeat-v${{ env.VERSION }}-Android-x86_64.apk\` |"
-            echo "| Android (all)   | \`Nasbeat-v${{ env.VERSION }}-Android-universal.apk\` |"
-            echo "| Windows x64     | \`Nasbeat-v${{ env.VERSION }}-Windows-x64.zip\` |"
-            echo "| Linux x64       | \`Nasbeat-v${{ env.VERSION }}-Linux-x64.tar.gz\` |"
+            echo "| Android (arm64)  | \`Nasbeat-v${{ env.VERSION }}-Android-arm64-v8a.apk\` |"
+            echo "| Android (armv7)  | \`Nasbeat-v${{ env.VERSION }}-Android-armeabi-v7a.apk\` |"
+            echo "| Android (x86_64) | \`Nasbeat-v${{ env.VERSION }}-Android-x86_64.apk\` |"
+            echo "| Android (all)    | \`Nasbeat-v${{ env.VERSION }}-Android-universal.apk\` |"
+            echo "| Windows x64      | \`Nasbeat-v${{ env.VERSION }}-Windows-x64.zip\` |"
+            echo "| Linux x64        | \`Nasbeat-v${{ env.VERSION }}-Linux-x64.tar.gz\` |"
             echo ""
-            [ -n "$FEATS"  ] && printf '### ✨ New Features\n%b\n\n' "$FEATS"
-            [ -n "$FIXES"  ] && printf '### 🐛 Bug Fixes\n%b\n\n'    "$FIXES"
-            [ -n "$PERF"   ] && printf '### ⚡ Performance\n%b\n\n'   "$PERF"
-            [ -n "$OTHERS" ] && printf '### 📝 Other\n%b\n\n'        "$OTHERS"
+            [ -n "$FEATS"  ] && printf '### ✨ Features\n%b\n\n'  "$FEATS"
+            [ -n "$FIXES"  ] && printf '### 🐛 Bug Fixes\n%b\n\n' "$FIXES"
+            [ -n "$PERF"   ] && printf '### ⚡ Performance\n%b\n\n' "$PERF"
+            [ -n "$OTHERS" ] && printf '### 📝 Other\n%b\n\n'      "$OTHERS"
             [ -n "$PREV"   ] && echo "---" && \
               echo "**Full diff:** https://github.com/${{ github.repository }}/compare/${PREV}...${{ env.TAG }}"
           } > /tmp/release_body.md
-
           cat /tmp/release_body.md
 
-      # ── Test 2: Release body must be non-empty ────────────────────
+      # ── Test: release body must be non-empty ─────────────────────
       - name: Verify release body
         run: |
-          SIZE=$(wc -c < /tmp/release_body.md)
+          SIZE=$(wc -c < /tmp/release_body.md | xargs)
           [ "$SIZE" -gt 100 ] && echo "✅ Release body: ${SIZE} chars" || \
             { echo "❌ Release body too short"; exit 1; }
 
-      # ── Publish / update the GitHub Release ──────────────────────
+      # ── Create / update release ──────────────────────────────────
       - name: Create or update GitHub Release
         uses: ncipollo/release-action@v1
         with:
@@ -111,19 +114,18 @@ jobs:
           prerelease:   ${{ inputs.prerelease }}
           allowUpdates: true
 
-      # ── Trigger all post-release workflows in parallel ───────────
+      # ── Trigger post-release jobs ────────────────────────────────
       - name: Trigger post-release pipeline
         uses: actions/github-script@v7
         with:
           script: |
-            const VERSION  = '${{ env.VERSION }}';
-            const PREREL   = '${{ inputs.prerelease }}';
+            const VERSION = '${{ env.VERSION }}';
             const jobs = [
-              { id: 'health-check.yml',       inputs: {} },
-              { id: 'update-changelog.yml',    inputs: { version: VERSION } },
-              { id: 'cleanup-artifacts.yml',   inputs: {} },
-              { id: 'sync-branches.yml',       inputs: {} },
-              { id: 'notify-release.yml',      inputs: { version: VERSION } },
+              { id: 'health-check.yml',      inputs: {} },
+              { id: 'update-changelog.yml',  inputs: { version: VERSION } },
+              { id: 'cleanup-artifacts.yml', inputs: {} },
+              { id: 'sync-branches.yml',     inputs: {} },
+              { id: 'notify-release.yml',    inputs: { version: VERSION } },
             ];
             for (const j of jobs) {
               await github.rest.actions.createWorkflowDispatch({
@@ -139,6 +141,4 @@ jobs:
             echo "# 🎉 Released: Nasbeat ${{ env.TAG }}"
             echo ""
             echo "https://github.com/${{ github.repository }}/releases/tag/${{ env.TAG }}"
-            echo ""
-            echo "Post-release jobs triggered: health-check, update-changelog, cleanup-artifacts, sync-branches, notify-release"
           } >> "$GITHUB_STEP_SUMMARY"
