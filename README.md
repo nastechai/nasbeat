@@ -1,5 +1,5 @@
 
-               # 𒆜 NasBeat 
+                   𒆜 NasBeat 
 
 **A unified local and plugin-first streaming music player built with Flutter & Rust.**
 
