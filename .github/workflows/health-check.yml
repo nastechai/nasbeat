@@ -1,0 +1,154 @@
+name: "Health Check"
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Publish Release"]
+    types: [completed]
+  schedule:
+    - cron: '0 0 * * *'   # daily midnight UTC
+
+permissions:
+  contents: read
+  issues:   write
+  actions:  write
+
+jobs:
+  check:
+    name: "Server & API Health"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      # ── Test 1: General internet via TCP DNS ────────────────────
+      - name: Internet connectivity (TCP)
+        id: internet
+        run: |
+          PASS=true
+          for IP_PORT in "8.8.8.8:53" "1.1.1.1:53" "9.9.9.9:53"; do
+            H=$(echo "$IP_PORT" | cut -d: -f1)
+            P=$(echo "$IP_PORT" | cut -d: -f2)
+            timeout 5 bash -c "echo >/dev/tcp/$H/$P" 2>/dev/null && \
+              echo "✅ TCP $IP_PORT" || { echo "❌ TCP $IP_PORT"; PASS=false; }
+          done
+          echo "ok=$PASS" >> "$GITHUB_OUTPUT"
+
+      # ── Test 2: YouTube Music frontend ─────────────────────────
+      - name: YouTube Music
+        id: yt_music
+        run: |
+          CODE=$(curl -sI --max-time 10 "https://music.youtube.com/" -o /dev/null -w "%{http_code}" || echo 000)
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+          [[ "$CODE" =~ ^(200|301|302)$ ]] && \
+            echo "✅ music.youtube.com → $CODE" && echo "ok=true" >> "$GITHUB_OUTPUT" || \
+            { echo "❌ music.youtube.com → $CODE"; echo "ok=false" >> "$GITHUB_OUTPUT"; }
+
+      # ── Test 3: YouTube Innertube API (used by ytmusic plugins) ─
+      - name: YouTube Innertube API
+        id: innertube
+        run: |
+          CODE=$(curl -s --max-time 10 -o /dev/null -w "%{http_code}" \
+            -X POST "https://music.youtube.com/youtubei/v1/search?prettyPrint=false" \
+            -H "Content-Type: application/json" \
+            -d '{"context":{"client":{"clientName":"WEB_REMIX","clientVersion":"1.0"}}}' || echo 000)
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+          [[ "$CODE" =~ ^(200|400|401)$ ]] && \
+            echo "✅ Innertube → $CODE (reachable)" && echo "ok=true" >> "$GITHUB_OUTPUT" || \
+            { echo "❌ Innertube → $CODE"; echo "ok=false" >> "$GITHUB_OUTPUT"; }
+
+      # ── Test 4: YouTube Data API v3 ────────────────────────────
+      - name: YouTube Data API v3
+        id: yt_api
+        run: |
+          CODE=$(curl -s --max-time 10 -o /dev/null -w "%{http_code}" \
+            "https://www.googleapis.com/youtube/v3/search?part=snippet&key=test" || echo 000)
+          [[ "$CODE" =~ ^(400|403|200)$ ]] && \
+            echo "✅ YouTube Data API → $CODE" && echo "ok=true" >> "$GITHUB_OUTPUT" || \
+            { echo "❌ YouTube Data API → $CODE"; echo "ok=false" >> "$GITHUB_OUTPUT"; }
+
+      # ── Test 5: Nasbeat plugin repository ──────────────────────
+      - name: Nasbeat plugin repo
+        id: plugin_repo
+        run: |
+          CODE=$(curl -s --max-time 10 -o /tmp/repo.json -w "%{http_code}" \
+            "https://nastechai.github.io/nasbeat/repositories.json" || echo 000)
+          if [ "$CODE" = "200" ]; then
+            python3 -m json.tool /tmp/repo.json > /dev/null 2>&1 && \
+              echo "✅ Plugin repo → 200 + valid JSON" && echo "ok=true" >> "$GITHUB_OUTPUT" || \
+              { echo "❌ Plugin repo → 200 but invalid JSON"; echo "ok=false" >> "$GITHUB_OUTPUT"; }
+          else
+            echo "❌ Plugin repo → $CODE"
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── Test 6: GitHub API (releases endpoint) ─────────────────
+      - name: GitHub Releases API
+        id: gh_api
+        run: |
+          NAME=$(curl -s --max-time 10 \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}" | \
+            python3 -c "import sys,json; print(json.load(sys.stdin).get('name','FAIL'))" 2>/dev/null)
+          [ "$NAME" != "FAIL" ] && [ -n "$NAME" ] && \
+            echo "✅ GitHub API → repo=$NAME" && echo "ok=true" >> "$GITHUB_OUTPUT" || \
+            { echo "❌ GitHub API failed"; echo "ok=false" >> "$GITHUB_OUTPUT"; }
+
+      # ── Test 7: Measure response times ─────────────────────────
+      - name: Response time audit
+        if: always()
+        run: |
+          echo "Response time audit:"
+          for URL in "https://music.youtube.com/" "https://nastechai.github.io/nasbeat/repositories.json" "https://api.github.com/"; do
+            TIME=$(curl -s --max-time 15 -o /dev/null -w "%{time_total}" "$URL" 2>/dev/null || echo "timeout")
+            echo "  $URL → ${TIME}s"
+          done
+
+      # ── Step summary ────────────────────────────────────────────
+      - name: Write summary
+        if: always()
+        run: |
+          OK(){ [ "$1" = "true" ] && echo "✅ Up" || echo "❌ Down"; }
+          {
+            echo "# 🩺 Health Check — $(date -u +'%Y-%m-%d %H:%M UTC')"
+            echo ""
+            echo "| Service | Status |"
+            echo "|---|---|"
+            echo "| Internet (TCP)            | $(OK ${{ steps.internet.outputs.ok }}) |"
+            echo "| YouTube Music             | $(OK ${{ steps.yt_music.outputs.ok }}) |"
+            echo "| YouTube Innertube API     | $(OK ${{ steps.innertube.outputs.ok }}) |"
+            echo "| YouTube Data API v3       | $(OK ${{ steps.yt_api.outputs.ok }}) |"
+            echo "| Nasbeat Plugin Repository | $(OK ${{ steps.plugin_repo.outputs.ok }}) |"
+            echo "| GitHub API                | $(OK ${{ steps.gh_api.outputs.ok }}) |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Alert on failure ────────────────────────────────────────
+      - name: Alert on critical failure
+        if: steps.plugin_repo.outputs.ok == 'false' || steps.yt_music.outputs.ok == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `🚨 Health Alert — ${new Date().toISOString().split('T')[0]}`;
+            const { data: open } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', labels: 'health-check',
+            });
+            if (open.find(i => i.title === title)) return;
+            await github.rest.issues.create({
+              owner: context.repo.owner, repo: context.repo.repo,
+              title, labels: ['health-check', 'bug'],
+              body: `Critical service down. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`,
+            });
+
+      # ── Trigger plugin sync ─────────────────────────────────────
+      - name: Trigger plugin-repo-sync
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner, repo: context.repo.repo,
+              workflow_id: 'plugin-repo-sync.yml', ref: 'main', inputs: {},
+            });
