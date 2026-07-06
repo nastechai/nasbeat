@@ -1,0 +1,108 @@
+name: "Update README"
+
+on:
+  workflow_dispatch:
+    inputs:
+      version: { type: string, default: '' }
+  workflow_run:
+    workflows: ["Update Changelog"]
+    types: [completed]
+
+permissions:
+  contents: write
+  actions:  write
+
+jobs:
+  update:
+    name: "Update README badges & version"
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: main
+
+      - name: Resolve version
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            echo "VERSION=${{ inputs.version }}" >> "$GITHUB_ENV"
+          else
+            VER=$(grep -E '^version:' pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)
+            echo "VERSION=$VER" >> "$GITHUB_ENV"
+          fi
+
+      # ── Test 1: README.md exists ────────────────────────────────
+      - name: Verify README.md exists
+        run: |
+          [ -f README.md ] && echo "✅ README.md found ($(wc -l < README.md) lines)" || \
+            { echo "❌ README.md not found"; exit 1; }
+
+      # ── Update static version badge if present ───────────────────
+      - name: Update static version badge
+        run: |
+          VER="${{ env.VERSION }}"
+          # Update any static version badge patterns
+          sed -i "s|version-v[0-9]*\.[0-9]*\.[0-9]*-|version-v${VER}-|g" README.md
+
+          # Update plain version references like "Current version: X.Y.Z"
+          sed -i "s|Current version: [0-9]*\.[0-9]*\.[0-9]*|Current version: ${VER}|g" README.md
+
+          echo "Updated README for v${VER}"
+
+      # ── Test 2: Verify the live GitHub shields badges are correct ─
+      - name: Test live GitHub release badge
+        run: |
+          CODE=$(curl -s --max-time 15 -o /dev/null -w "%{http_code}" \
+            "https://img.shields.io/github/v/release/nastechai/nasbeat" || echo 000)
+          [ "$CODE" = "200" ] && echo "✅ GitHub release badge responding (HTTP $CODE)" || \
+            echo "⚠️  Badge endpoint returned $CODE"
+
+      # ── Test 3: Verify README has no broken local image links ────
+      - name: Check local image references
+        run: |
+          BROKEN=0
+          while IFS= read -r SRC; do
+            # Only check local paths (not http/https)
+            if ! echo "$SRC" | grep -qE '^https?://'; then
+              if [ ! -f "$SRC" ]; then
+                echo "⚠️  Missing image: $SRC"
+                BROKEN=$((BROKEN+1))
+              fi
+            fi
+          done < <(grep -oE '!\[.*\]\(([^)]+)\)' README.md | sed 's/.*(\(.*\))/\1/')
+          echo "README_BROKEN_IMGS=$BROKEN" >> "$GITHUB_ENV"
+          [ "$BROKEN" -eq 0 ] && echo "✅ All local images found" || \
+            echo "⚠️  $BROKEN broken image reference(s)"
+
+      # ── Test 4: README word count sanity check ───────────────────
+      - name: README sanity check
+        run: |
+          WORDS=$(wc -w < README.md)
+          LINES=$(wc -l < README.md)
+          echo "README: $LINES lines, $WORDS words"
+          [ "$WORDS" -gt 50 ] && echo "✅ README has meaningful content" || \
+            { echo "❌ README is too sparse"; exit 1; }
+
+      - name: Commit README changes
+        run: |
+          git config user.name  "nasbeat-bot"
+          git config user.email "bot@nastechai.dev"
+          git add README.md
+          git diff --cached --quiet && echo "No README changes." || {
+            git commit -m "docs(readme): update version to v${{ env.VERSION }} [skip ci]"
+            git push
+            echo "✅ README committed"
+          }
+
+      - name: Summary
+        run: |
+          {
+            echo "# 📖 README Updated"
+            echo ""
+            echo "Version: **v${{ env.VERSION }}**"
+            echo "Broken image refs: **${README_BROKEN_IMGS:-0}**"
+          } >> "$GITHUB_STEP_SUMMARY"
