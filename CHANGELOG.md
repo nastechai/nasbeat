@@ -1,3 +1,57 @@
+# Nasbeat Changelog
+
+All notable changes to this project will be documented here.
+
+---
+## [v3.0.9] — 2026-07-06
+
+### ✨ Features
+
+- feat: add repositories.json for GitHub Pages hosting (`b05362a`)
+
+### 🐛 Bug Fixes
+
+- fix(plugins): seed bloom-factory plugin repository (`1c7fd5c`)
+- fix(windows): silence MSVC STL1011 experimental/coroutine deprecation error (`e84f9e7`)
+- fix: match BloomeeTunes exactly - sync _isOfflineError + GitHub Pages URL (`fc9400c`)
+- fix: use TCP socket probe for offline detection, not DNS lookup (`715d8c3`)
+- fix: revert skip button; keep proper offline detection (`cf379d3`)
+- fix: correctly detect offline vs server-unreachable; add Skip button (`27bf06a`)
+- fix: correctly detect offline vs server-unreachable; add Skip button (`4b37bb1`)
+- fix: use latest stable Flutter (remove version pin) (`78beba6`)
+- fix: use latest stable Flutter (remove version pin) (`865596e`)
+- fix: use latest stable Flutter (remove version pin) (`dfe4745`)
+
+### 🔧 Maintenance
+
+- ci: add/update workflow final-report.yml (`2944266`)
+- ci: add/update workflow notify-release.yml (`a8afd60`)
+- ci: add/update workflow sync-branches.yml (`2e0e3cf`)
+- ci: add/update workflow cleanup-artifacts.yml (`d19f5ca`)
+- ci: add/update workflow stale-issues.yml (`5d077f3`)
+- ci: add/update workflow dependency-update.yml (`77c2c69`)
+- ci: add/update workflow update-readme.yml (`f57d172`)
+- ci: add/update workflow update-changelog.yml (`7d4f4a8`)
+- ci: add/update workflow plugin-validator.yml (`a2c5726`)
+- ci: add/update workflow plugin-repo-sync.yml (`d1b8095`)
+- ci: add/update workflow health-check.yml (`77e0419`)
+- ci: add/update workflow publish-release.yml (`8913bd0`)
+- ci: add/update workflow sign-verify.yml (`2cc8e4d`)
+- ci: add/update workflow security-audit.yml (`325592b`)
+- ci: add/update workflow code-quality.yml (`83e0e06`)
+- ci: add/update workflow build-linux.yml (`4151718`)
+- ci: add/update workflow build-windows.yml (`f3bb184`)
+- ci: add/update workflow build-android.yml (`ffffcc0`)
+- ci: add/update workflow version-bump.yml (`eb8eb3e`)
+- ci: add/update workflow main.yml (`eaa644d`)
+- ci: separate platform builds with prerelease toggle (`057be56`)
+- ci: separate platform builds with prerelease toggle (`ae4acc3`)
+- ci: separate platform builds with prerelease toggle (`3a9ba98`)
+- ci: separate platform builds with prerelease toggle (`be70af7`)
+
+**Compare:** https://github.com/nastechai/nasbeat/compare/v3.0.4+4...v3.0.9
+
+---
 
 ## [3.0.4] - 2026-05-29
 
