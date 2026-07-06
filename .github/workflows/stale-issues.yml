@@ -1,0 +1,68 @@
+name: "Stale Issues"
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # daily 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  issues:        write
+  pull-requests: write
+
+jobs:
+  stale:
+    name: "Close Stale Issues & PRs"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          stale-issue-message: >
+            👋 This issue has been automatically marked as **stale** because it has had
+            no activity in the last 30 days. It will be closed in 7 days unless
+            there is new activity. If this is still relevant, please comment or add a label.
+          close-issue-message: >
+            🔒 This issue was closed automatically after 37 days of inactivity.
+            Re-open if this is still a problem.
+          stale-pr-message: >
+            👋 This pull request has been automatically marked as **stale** because it has had
+            no activity in the last 14 days. It will be closed in 7 days unless updated.
+          close-pr-message: >
+            🔒 This PR was closed automatically after 21 days of inactivity.
+            Feel free to re-open or create a new PR.
+          days-before-issue-stale:  30
+          days-before-issue-close:  7
+          days-before-pr-stale:     14
+          days-before-pr-close:     7
+          stale-issue-label:        'stale'
+          stale-pr-label:           'stale'
+          exempt-issue-labels:      'pinned,security,health-check,high-priority'
+          exempt-pr-labels:         'pinned,work-in-progress'
+          operations-per-run:       50
+
+      # ── Report: how many issues are currently open ───────────────
+      - name: Count open issues & PRs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', per_page: 100,
+            });
+            const realIssues = issues.filter(i => !i.pull_request);
+            const prs        = issues.filter(i =>  i.pull_request);
+
+            const staleIssues = realIssues.filter(i => i.labels.some(l => l.name === 'stale'));
+            const stalePRs    = prs.filter(i => i.labels.some(l => l.name === 'stale'));
+
+            const body = [
+              '# 🧹 Stale Issues Report',
+              '',
+              '| Metric | Count |',
+              '|---|---|',
+              `| Open issues       | ${realIssues.length} |`,
+              `| Open PRs          | ${prs.length} |`,
+              `| Stale issues      | ${staleIssues.length} |`,
+              `| Stale PRs         | ${stalePRs.length} |`,
+            ].join('\n');
+
+            core.summary.addRaw(body).write();
