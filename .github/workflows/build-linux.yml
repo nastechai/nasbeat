@@ -3,73 +3,105 @@ name: "Build Linux"
 on:
   workflow_dispatch:
     inputs:
-      prerelease:
-        description: 'Publish as pre-release?'
-        type: boolean
-        default: true
-  workflow_call:
-    inputs:
-      prerelease:
-        type: boolean
-        default: true
+      version:    { type: string,  default: '' }
+      prerelease: { type: boolean, default: false }
+  workflow_run:
+    workflows: ["Version Bump"]
+    types: [completed]
 
 permissions:
   contents: write
+  actions:  write
 
 jobs:
   build-linux:
-    name: Build Linux
+    name: "Build Linux x64"
     runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Setup Rust Toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache Rust Dependencies
+      - name: Cache Rust
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: "rust"
+          workspaces: rust
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
+          channel: stable
 
-      - name: Install Linux Dependencies
+      - name: Install Linux system deps
         run: |
-          sudo apt-get update
-          sudo apt-get install -y clang cmake git ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev
+          sudo apt-get update -qq
+          sudo apt-get install -y \
+            clang cmake git ninja-build pkg-config \
+            libgtk-3-dev liblzma-dev libstdc++-12-dev
 
-      - name: Install Dependencies
+      - name: Install Flutter deps
         run: flutter pub get
 
-      - name: Extract version from pubspec.yaml
+      - name: Resolve version
         run: |
-          VERSION=$(grep -E '^version:' pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          if [ -n "${{ inputs.version }}" ]; then
+            echo "VERSION=${{ inputs.version }}" >> "$GITHUB_ENV"
+          else
+            VER=$(grep -E '^version:' pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)
+            echo "VERSION=$VER" >> "$GITHUB_ENV"
+          fi
 
-      - name: Build Linux App
+      - name: Build Linux release
         run: flutter build linux --release --build-number ${{ github.run_number }}
 
-      - name: Compress Linux Build
+      # ── Test: verify bundle exists and has executable ──────────
+      - name: Verify Linux build output
         run: |
-          tar -czf "Nasbeat-v${{ env.VERSION }}-Linux-x64.tar.gz" -C build/linux/x64/release/bundle .
+          BUNDLE="build/linux/x64/release/bundle"
+          [ -d "$BUNDLE" ] || { echo "❌ Bundle dir missing"; exit 1; }
+          EXE=$(find "$BUNDLE" -maxdepth 1 -type f -executable | head -1)
+          [ -n "$EXE" ] && echo "✅ Executable: $EXE" || { echo "❌ No executable in bundle"; exit 1; }
+          du -sh "$BUNDLE"
 
-      - name: Upload Artifact
+      - name: Compress Linux bundle
+        run: |
+          tar -czf "Nasbeat-v${{ env.VERSION }}-Linux-x64.tar.gz" \
+            -C build/linux/x64/release/bundle .
+          ls -lh "Nasbeat-v${{ env.VERSION }}-Linux-x64.tar.gz"
+
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: Nasbeat-v${{ env.VERSION }}-Linux-x64
+          retention-days: 7
           path: Nasbeat-v${{ env.VERSION }}-Linux-x64.tar.gz
 
-      - name: Publish to Release
+      - name: Attach tarball to release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: Nasbeat-v${{ env.VERSION }}-Linux-x64.tar.gz
-          tag: v${{ env.VERSION }}
-          name: "Nasbeat v${{ env.VERSION }}"
-          token: ${{ secrets.GITHUB_TOKEN }}
-          prerelease: ${{ inputs.prerelease }}
+          artifacts:    Nasbeat-v${{ env.VERSION }}-Linux-x64.tar.gz
+          tag:          v${{ env.VERSION }}
+          name:         "Nasbeat v${{ env.VERSION }}"
+          token:        ${{ secrets.GITHUB_TOKEN }}
+          prerelease:   ${{ inputs.prerelease }}
           allowUpdates: true
           omitBodyDuringUpdate: true
+
+      # ── Linux is typically last to finish → trigger publish ────
+      - name: Trigger publish-release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner, repo: context.repo.repo,
+              workflow_id: 'publish-release.yml', ref: 'main',
+              inputs: { version: '${{ env.VERSION }}', prerelease: '${{ inputs.prerelease }}' },
+            });
