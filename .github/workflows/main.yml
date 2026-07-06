@@ -1,31 +1,62 @@
-name: "Build & Release All"
+name: "Orchestrator"
 
 on:
   workflow_dispatch:
     inputs:
+      bump:
+        description: 'Version segment to bump'
+        type: choice
+        default: patch
+        options: [patch, minor, major]
       prerelease:
         description: 'Publish as pre-release?'
         type: boolean
-        default: true
+        default: false
+
+permissions:
+  contents: write
+  actions:  write
 
 jobs:
-  android:
-    name: Android
-    uses: ./.github/workflows/build-android.yml
-    with:
-      prerelease: ${{ inputs.prerelease }}
-    secrets: inherit
+  start:
+    name: "Start Pipeline"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Version Bump
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner:       context.repo.owner,
+              repo:        context.repo.repo,
+              workflow_id: 'version-bump.yml',
+              ref:         'main',
+              inputs: {
+                bump:       '${{ inputs.bump }}',
+                prerelease: '${{ inputs.prerelease }}',
+              },
+            });
+            core.notice('✅ Pipeline started → version-bump.yml');
 
-  windows:
-    name: Windows
-    uses: ./.github/workflows/build-windows.yml
-    with:
-      prerelease: ${{ inputs.prerelease }}
-    secrets: inherit
-
-  linux:
-    name: Linux
-    uses: ./.github/workflows/build-linux.yml
-    with:
-      prerelease: ${{ inputs.prerelease }}
-    secrets: inherit
+      - name: Write pipeline summary
+        run: |
+          {
+            echo "# 🚀 Nasbeat Release Pipeline Started"
+            echo ""
+            echo "| Setting | Value |"
+            echo "|---|---|"
+            echo "| Bump type  | **${{ inputs.bump }}** |"
+            echo "| Pre-release | ${{ inputs.prerelease }} |"
+            echo "| Triggered by | @${{ github.actor }} |"
+            echo "| Time | $(date -u +'%Y-%m-%d %H:%M UTC') |"
+            echo ""
+            echo "## Pipeline Steps"
+            echo "1. ✅ Orchestrator (this)"
+            echo "2. ⏳ Version Bump"
+            echo "3. ⏳ Build Android / Windows / Linux (parallel)"
+            echo "4. ⏳ Code Quality + Security Audit"
+            echo "5. ⏳ Sign & Verify APKs"
+            echo "6. ⏳ Publish Release"
+            echo "7. ⏳ Post-release jobs (parallel)"
+            echo "8. ⏳ Final Report"
+          } >> "$GITHUB_STEP_SUMMARY"
