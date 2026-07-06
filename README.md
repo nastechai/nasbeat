@@ -1,5 +1,3 @@
-<div align="center">
-" alt="NasBeat Banner" width="100%">
 
 # 𒆜 NasBeat 
 
