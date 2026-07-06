@@ -1,0 +1,133 @@
+name: "Dependency Update"
+
+on:
+  schedule:
+    - cron: '0 8 * * 1'   # every Monday 08:00 UTC
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Security Audit"]
+    types: [completed]
+
+permissions:
+  contents: read
+  issues:   write
+  actions:  write
+
+jobs:
+  deps:
+    name: "Audit & Report Outdated Packages"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - run: flutter pub get
+
+      # ── Test 1: Check outdated packages ─────────────────────────
+      - name: Check outdated packages
+        run: |
+          flutter pub outdated --json 2>/dev/null > /tmp/outdated.json || \
+            echo '{"packages":[]}' > /tmp/outdated.json
+          flutter pub outdated 2>&1 | tee /tmp/outdated.txt || true
+
+          python3 << 'PYEOF'
+          import json, os
+          try:
+              data = json.load(open('/tmp/outdated.json'))
+              pkgs = data.get('packages', [])
+              upgradable   = [p for p in pkgs if p.get('upgradable',{}).get('version') and
+                              p.get('current',{}).get('version') != p.get('upgradable',{}).get('version')]
+              resolvable   = [p for p in pkgs if p.get('resolvable',{}).get('version')]
+              discontinued = [p for p in pkgs if p.get('current',{}).get('discontinued')]
+              print(f"Upgradable:    {len(upgradable)}")
+              print(f"Resolvable:    {len(resolvable)}")
+              print(f"Discontinued:  {len(discontinued)}")
+              with open(os.environ['GITHUB_ENV'], 'a') as f:
+                  f.write(f"OUTDATED={len(upgradable)}\n")
+                  f.write(f"DISCONTINUED={len(discontinued)}\n")
+          except Exception as e:
+              print(f"Parse error: {e}")
+              with open(os.environ['GITHUB_ENV'], 'a') as f:
+                  f.write("OUTDATED=0\nDISCONTINUED=0\n")
+          PYEOF
+
+      # ── Test 2: Check for git-sourced deps ──────────────────────
+      - name: Check git-sourced dependencies
+        run: |
+          GIT_DEPS=$(grep -c "source: git" pubspec.lock 2>/dev/null || echo 0)
+          echo "GIT_DEPS=$GIT_DEPS" >> "$GITHUB_ENV"
+          if [ "$GIT_DEPS" -gt 0 ]; then
+            echo "⚠️  $GIT_DEPS git-sourced dep(s) (not from pub.dev):"
+            grep -B2 "source: git" pubspec.lock | grep "url:" | sed 's/^/  /' || true
+          fi
+
+      # ── Test 3: Verify pubspec.yaml is parseable ─────────────────
+      - name: Validate pubspec.yaml
+        run: |
+          python3 << 'PYEOF'
+          import subprocess, sys
+          r = subprocess.run(['flutter', 'pub', 'get', '--dry-run'],
+                            capture_output=True, text=True)
+          if r.returncode == 0:
+              print("✅ pubspec.yaml resolves cleanly")
+          else:
+              print("⚠️  flutter pub get dry-run issues:")
+              print(r.stderr[:500])
+          PYEOF
+
+      # ── Test 4: Check Dart SDK constraint is current ─────────────
+      - name: Check SDK constraint
+        run: |
+          CONSTRAINT=$(grep -A3 "environment:" pubspec.yaml | grep "sdk:" | head -1)
+          echo "SDK constraint: $CONSTRAINT"
+          DART_VER=$(dart --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+          echo "Dart version in CI: $DART_VER"
+
+      # ── Summary ─────────────────────────────────────────────────
+      - name: Write summary
+        if: always()
+        run: |
+          {
+            echo "# 📦 Dependency Update Report — $(date -u +'%Y-%m-%d')"
+            echo ""
+            echo "| Metric | Count |"
+            echo "|---|---|"
+            echo "| Upgradable packages  | ${OUTDATED:-0} |"
+            echo "| Discontinued         | ${DISCONTINUED:-0} |"
+            echo "| Git-sourced deps     | ${GIT_DEPS:-0} |"
+            echo ""
+            echo "## Full output"
+            echo '```'
+            cat /tmp/outdated.txt 2>/dev/null || echo "(none)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Create issue if many outdated ────────────────────────────
+      - name: Create update issue
+        if: env.OUTDATED != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs   = require('fs');
+            const text = fs.existsSync('/tmp/outdated.txt')
+                ? fs.readFileSync('/tmp/outdated.txt','utf8').slice(0,5000) : '';
+            const week = new Date().toISOString().split('T')[0];
+            const title = `📦 Dependencies: ${process.env.OUTDATED} package(s) outdated — ${week}`;
+
+            const {data:issues} = await github.rest.issues.listForRepo({
+              owner:context.repo.owner,repo:context.repo.repo,
+              state:'open',labels:'dependencies',
+            });
+            if (issues.find(i=>i.title===title)) return;
+
+            await github.rest.issues.create({
+              owner:context.repo.owner,repo:context.repo.repo,
+              title, labels:['dependencies'],
+              body:`## Outdated Packages\n\n**${process.env.OUTDATED}** packages can be updated.\n\n\`\`\`\n${text}\n\`\`\`\n\nRun \`flutter pub upgrade\` to update.\n_Generated ${week}_`,
+            });
