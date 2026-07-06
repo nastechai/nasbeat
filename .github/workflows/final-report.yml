@@ -1,0 +1,190 @@
+name: "Final Report"
+
+on:
+  workflow_dispatch:
+    inputs:
+      version: { type: string, default: '' }
+  workflow_run:
+    workflows: ["Notify Release", "Plugin Validator"]
+    types: [completed]
+
+permissions:
+  contents: read
+  issues:   write
+  actions:  read
+
+jobs:
+  report:
+    name: "Pipeline Final Report"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Resolve version
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            echo "VERSION=${{ inputs.version }}" >> "$GITHUB_ENV"
+          else
+            VER=$(grep -E '^version:' pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)
+            echo "VERSION=$VER" >> "$GITHUB_ENV"
+          fi
+
+      # ── Collect results from all pipeline jobs ───────────────────
+      - name: Collect pipeline run results
+        id: collect
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = `v${{ env.VERSION }}`;
+
+            // Check each workflow for latest run result
+            const workflows = [
+              { name: 'Version Bump',       id: 'version-bump.yml' },
+              { name: 'Build Android',      id: 'build-android.yml' },
+              { name: 'Build Windows',      id: 'build-windows.yml' },
+              { name: 'Build Linux',        id: 'build-linux.yml' },
+              { name: 'Code Quality',       id: 'code-quality.yml' },
+              { name: 'Security Audit',     id: 'security-audit.yml' },
+              { name: 'Sign & Verify APKs', id: 'sign-verify.yml' },
+              { name: 'Publish Release',    id: 'publish-release.yml' },
+              { name: 'Health Check',       id: 'health-check.yml' },
+              { name: 'Plugin Repo Sync',   id: 'plugin-repo-sync.yml' },
+              { name: 'Plugin Validator',   id: 'plugin-validator.yml' },
+              { name: 'Update Changelog',   id: 'update-changelog.yml' },
+              { name: 'Update README',      id: 'update-readme.yml' },
+              { name: 'Sync Branches',      id: 'sync-branches.yml' },
+              { name: 'Notify Release',     id: 'notify-release.yml' },
+              { name: 'Cleanup Artifacts',  id: 'cleanup-artifacts.yml' },
+            ];
+
+            const rows = [];
+            let passed = 0, failed = 0, skipped = 0;
+
+            for (const wf of workflows) {
+              try {
+                const { data } = await github.rest.actions.listWorkflowRuns({
+                  owner:       context.repo.owner,
+                  repo:        context.repo.repo,
+                  workflow_id: wf.id,
+                  per_page:    1,
+                });
+                const run = data.workflow_runs[0];
+                if (!run) { rows.push({ ...wf, status: '⏭️ Never run' }); skipped++; continue; }
+
+                const icon = run.conclusion === 'success' ? '✅' :
+                             run.conclusion === 'failure' ? '❌' :
+                             run.status     === 'in_progress' ? '🔄' : '⏭️';
+
+                if (run.conclusion === 'success') passed++;
+                else if (run.conclusion === 'failure') failed++;
+                else skipped++;
+
+                rows.push({
+                  name:   wf.name,
+                  status: `${icon} ${run.conclusion || run.status}`,
+                  url:    run.html_url,
+                  time:   run.updated_at ? run.updated_at.split('T')[1].split('.')[0] : '?',
+                });
+              } catch (e) {
+                rows.push({ name: wf.name, status: '⚠️ error', url: '', time: '' });
+                skipped++;
+              }
+            }
+
+            core.setOutput('passed',  passed);
+            core.setOutput('failed',  failed);
+            core.setOutput('skipped', skipped);
+
+            // Write detailed summary
+            const tableRows = rows.map(r =>
+              `| [${r.name}](${r.url || '#'}) | ${r.status} | ${r.time} |`
+            ).join('\n');
+
+            const summary = [
+              `# 🏁 Final Pipeline Report — Nasbeat v${{ env.VERSION }}`,
+              '',
+              `**Date:** ${new Date().toISOString().split('T')[0]}`,
+              '',
+              `| Metric | Count |`,
+              `|---|---|`,
+              `| ✅ Passed  | ${passed} |`,
+              `| ❌ Failed  | ${failed} |`,
+              `| ⏭️ Skipped | ${skipped} |`,
+              '',
+              '## Workflow Results',
+              '',
+              '| Workflow | Status | Time (UTC) |',
+              '|---|---|---|',
+              tableRows,
+            ].join('\n');
+
+            core.summary.addRaw(summary).write();
+            return { passed, failed, tableRows };
+
+      # ── Test: verify the GitHub Release has assets ───────────────
+      - name: Verify release completeness
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = `v${{ env.VERSION }}`;
+            try {
+              const { data: release } = await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner, repo: context.repo.repo, tag,
+              });
+              const assets  = release.assets;
+              const hasApk  = assets.some(a => a.name.includes('Android'));
+              const hasWin  = assets.some(a => a.name.includes('Windows'));
+              const hasLinux= assets.some(a => a.name.includes('Linux'));
+
+              console.log(`Release: ${release.name}`);
+              console.log(`Android assets: ${hasApk ? '✅' : '❌'}`);
+              console.log(`Windows assets: ${hasWin ? '✅' : '❌'}`);
+              console.log(`Linux assets:   ${hasLinux ? '✅' : '❌'}`);
+              console.log(`Total assets:   ${assets.length}`);
+
+              const complete = hasApk && hasWin && hasLinux;
+              if (!complete) {
+                core.warning('Release is missing some platform assets — builds may still be running');
+              }
+            } catch (e) {
+              core.warning(`Could not verify release: ${e.message}`);
+            }
+
+      # ── Create summary issue on pipeline failure ─────────────────
+      - name: Create failure issue
+        if: steps.collect.outputs.failed != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const date = new Date().toISOString().split('T')[0];
+            await github.rest.issues.create({
+              owner: context.repo.owner, repo: context.repo.repo,
+              title: `🔴 Pipeline Failures — v${{ env.VERSION }} — ${date}`,
+              labels: ['bug', 'pipeline'],
+              body: [
+                `## Release Pipeline Failure Report`,
+                '',
+                `**Version:** v${{ env.VERSION }}`,
+                `**Failed workflows:** ${{ steps.collect.outputs.failed }}`,
+                `**Passed:** ${{ steps.collect.outputs.passed }}`,
+                '',
+                `**Actions run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`,
+                '',
+                'Please investigate the failed workflows above.',
+              ].join('\n'),
+            });
+
+      # ── Write final GITHUB_STEP_SUMMARY ──────────────────────────
+      - name: Final step summary
+        run: |
+          {
+            echo "# 🏁 Pipeline Complete — Nasbeat v${{ env.VERSION }}"
+            echo ""
+            echo "✅ Passed: ${{ steps.collect.outputs.passed }}"
+            echo "❌ Failed: ${{ steps.collect.outputs.failed }}"
+            echo ""
+            echo "Release: https://github.com/${{ github.repository }}/releases/tag/v${{ env.VERSION }}"
+          } >> "$GITHUB_STEP_SUMMARY"
