@@ -58,7 +58,7 @@ class PluginBootstrapProgress {
 
 class PluginBootstrapService {
   static const String hostedRepositoriesUrl =
-      'https://nasbeat.nastechai.com/repositories.json';
+      'https://nastechai.github.io/nasbeat/repositories.json';
 
   static const int maxRetries = 3;
 
@@ -123,7 +123,7 @@ class PluginBootstrapService {
       return PluginBootstrapResult(
         success: false,
         errors: errors,
-        failureReason: await _isOfflineError(e)
+        failureReason: _isOfflineError(e)
             ? PluginBootstrapFailureReason.noInternet
             : PluginBootstrapFailureReason.setupFailed,
       );
@@ -642,30 +642,7 @@ class PluginBootstrapService {
     }
   }
 
-  /// Returns true only when the device genuinely has no internet access.
-  ///
-  /// DNS lookup is NOT used here because a local WiFi router can resolve
-  /// hostnames even when there is no upstream internet. Instead we open a
-  /// raw TCP socket to a hardcoded IP (Google Public DNS on port 53), which
-  /// confirms real end-to-end connectivity without touching DNS at all.
-  static Future<bool> _isOfflineError(Object error) async {
-    if (error is! SocketException && error is! TimeoutException) {
-      return false;
-    }
-    // Try two well-known IPs so a single blocked host doesn't give a wrong result.
-    for (final host in ['8.8.8.8', '1.1.1.1']) {
-      try {
-        final socket = await Socket.connect(
-          host,
-          53,
-          timeout: const Duration(seconds: 4),
-        );
-        socket.destroy();
-        return false; // TCP handshake succeeded → internet is available
-      } catch (_) {
-        // Try the next host before giving up.
-      }
-    }
-    return true; // Both probes failed → genuinely offline
+  static bool _isOfflineError(Object error) {
+    return error is SocketException || error is TimeoutException;
   }
 }
