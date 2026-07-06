@@ -3,31 +3,34 @@ name: "Build Android"
 on:
   workflow_dispatch:
     inputs:
-      prerelease:
-        description: 'Publish as pre-release?'
-        type: boolean
-        default: true
-  workflow_call:
-    inputs:
-      prerelease:
-        type: boolean
-        default: true
+      version:    { type: string,  default: '' }
+      prerelease: { type: boolean, default: false }
+  workflow_run:
+    workflows: ["Version Bump"]
+    types: [completed]
 
 permissions:
   contents: write
+  actions:  write
 
 jobs:
   build-android:
-    name: Build Android
+    name: "Build Android APKs"
     runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Setup Java
         uses: actions/setup-java@v3.12.0
         with:
-          distribution: 'oracle'
+          distribution: oracle
           java-version: '17'
 
       - name: Setup Rust Toolchain
@@ -35,33 +38,41 @@ jobs:
         with:
           targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
 
-      - name: Cache Rust Dependencies
+      - name: Cache Rust
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: "rust"
+          workspaces: rust
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
+          channel: stable
 
-      - name: Install Dependencies
+      - name: Install Flutter deps
         run: flutter pub get
 
-      - name: Extract version from pubspec.yaml
-        run: |
-          VERSION=$(grep -E '^version:' pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+      # ── Test: dart analyze must pass ───────────────────────────
+      - name: Pre-build dart analyze
+        run: flutter analyze --no-pub
 
-      - name: Create keystore file
+      - name: Resolve version
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            echo "VERSION=${{ inputs.version }}" >> "$GITHUB_ENV"
+          else
+            VER=$(grep -E '^version:' pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)
+            echo "VERSION=$VER" >> "$GITHUB_ENV"
+          fi
+
+      - name: Create keystore
         run: |
           if [ -z "${{ secrets.KEY_STORE }}" ]; then
-            echo "No signing secrets found; release APKs will use debug signing."
+            echo "No signing secrets — using debug signing."
             exit 0
           fi
           echo "${{ secrets.KEY_STORE }}" | base64 --decode > ./android/nasbeat.jks
 
-      - name: Create Keystore properties
+      - name: Create keystore properties
         run: |
           if [ -z "${{ secrets.KEY_STORE }}" ]; then exit 0; fi
           cat > ./android/key.properties << EOF
@@ -70,50 +81,59 @@ jobs:
           keyAlias=${{ secrets.KEY_ALIAS }}
           EOF
 
-      - name: Build APKs
+      - name: Build APKs (split ABI)
         run: flutter build apk --release --split-per-abi --build-number ${{ github.run_number }}
 
-      - name: Verify Signing
+      # ── Test: verify all 4 APKs were produced ─────────────────
+      - name: Verify APK outputs exist
         run: |
-          BUILD_TOOLS=$(ls $ANDROID_HOME/build-tools | sort -V | tail -1)
-          echo "Using build tools: $BUILD_TOOLS"
-          $ANDROID_HOME/build-tools/$BUILD_TOOLS/apksigner verify build/app/outputs/flutter-apk/app-release.apk
-          $ANDROID_HOME/build-tools/$BUILD_TOOLS/apksigner verify build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
-          $ANDROID_HOME/build-tools/$BUILD_TOOLS/apksigner verify build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
-          $ANDROID_HOME/build-tools/$BUILD_TOOLS/apksigner verify build/app/outputs/flutter-apk/app-x86_64-release.apk
+          BASE="build/app/outputs/flutter-apk"
+          for apk in app-release.apk app-arm64-v8a-release.apk app-armeabi-v7a-release.apk app-x86_64-release.apk; do
+            [ -f "$BASE/$apk" ] && echo "✅ $apk" || { echo "❌ Missing $apk"; exit 1; }
+          done
 
-      - name: Rename APK files
+      - name: Rename APKs
         run: |
-          mv build/app/outputs/flutter-apk/app-release.apk \
-             build/app/outputs/flutter-apk/Nasbeat-v${{ env.VERSION }}-Android-universal.apk
-          mv build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk \
-             build/app/outputs/flutter-apk/Nasbeat-v${{ env.VERSION }}-Android-armeabi-v7a.apk
-          mv build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
-             build/app/outputs/flutter-apk/Nasbeat-v${{ env.VERSION }}-Android-arm64-v8a.apk
-          mv build/app/outputs/flutter-apk/app-x86_64-release.apk \
-             build/app/outputs/flutter-apk/Nasbeat-v${{ env.VERSION }}-Android-x86_64.apk
+          VER="${{ env.VERSION }}"
+          BASE="build/app/outputs/flutter-apk"
+          mv "$BASE/app-release.apk"              "$BASE/Nasbeat-v${VER}-Android-universal.apk"
+          mv "$BASE/app-arm64-v8a-release.apk"    "$BASE/Nasbeat-v${VER}-Android-arm64-v8a.apk"
+          mv "$BASE/app-armeabi-v7a-release.apk"  "$BASE/Nasbeat-v${VER}-Android-armeabi-v7a.apk"
+          mv "$BASE/app-x86_64-release.apk"       "$BASE/Nasbeat-v${VER}-Android-x86_64.apk"
 
-      - name: Upload Artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: Nasbeat-v${{ env.VERSION }}-Android
+          retention-days: 7
           path: |
             build/app/outputs/flutter-apk/Nasbeat-v${{ env.VERSION }}-Android-universal.apk
-            build/app/outputs/flutter-apk/Nasbeat-v${{ env.VERSION }}-Android-armeabi-v7a.apk
             build/app/outputs/flutter-apk/Nasbeat-v${{ env.VERSION }}-Android-arm64-v8a.apk
+            build/app/outputs/flutter-apk/Nasbeat-v${{ env.VERSION }}-Android-armeabi-v7a.apk
             build/app/outputs/flutter-apk/Nasbeat-v${{ env.VERSION }}-Android-x86_64.apk
 
-      - name: Publish to Release
+      - name: Attach APKs to release
         uses: ncipollo/release-action@v1
         with:
           artifacts: |
             build/app/outputs/flutter-apk/Nasbeat-v${{ env.VERSION }}-Android-universal.apk
-            build/app/outputs/flutter-apk/Nasbeat-v${{ env.VERSION }}-Android-armeabi-v7a.apk
             build/app/outputs/flutter-apk/Nasbeat-v${{ env.VERSION }}-Android-arm64-v8a.apk
+            build/app/outputs/flutter-apk/Nasbeat-v${{ env.VERSION }}-Android-armeabi-v7a.apk
             build/app/outputs/flutter-apk/Nasbeat-v${{ env.VERSION }}-Android-x86_64.apk
-          tag: v${{ env.VERSION }}
-          name: "Nasbeat v${{ env.VERSION }}"
-          token: ${{ secrets.GITHUB_TOKEN }}
-          prerelease: ${{ inputs.prerelease }}
-          allowUpdates: true
+          tag:              v${{ env.VERSION }}
+          name:             "Nasbeat v${{ env.VERSION }}"
+          token:            ${{ secrets.GITHUB_TOKEN }}
+          prerelease:       ${{ inputs.prerelease }}
+          allowUpdates:     true
           omitBodyDuringUpdate: true
+
+      # ── Trigger APK sign-verify ─────────────────────────────────
+      - name: Trigger sign-verify workflow
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner, repo: context.repo.repo,
+              workflow_id: 'sign-verify.yml', ref: 'main',
+              inputs: { version: '${{ env.VERSION }}' },
+            });
