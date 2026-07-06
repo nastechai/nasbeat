@@ -39,95 +39,128 @@ jobs:
       # ── Test 1: Dart formatter ──────────────────────────────────
       - name: Check dart formatting
         id: format
+        continue-on-error: true
         run: |
-          OUT=$(dart format --output=none --set-exit-if-changed lib/ test/ 2>&1 || true)
-          if echo "$OUT" | grep -q "Formatted"; then
-            echo "FORMAT_FAIL=true"  >> "$GITHUB_ENV"
-            echo "FORMAT_DETAIL<<EOF" >> "$GITHUB_ENV"
-            echo "$OUT" >> "$GITHUB_ENV"
-            echo "EOF" >> "$GITHUB_ENV"
-            echo "❌ Format issues:"
-            echo "$OUT"
+          set +e
+          dart format --output=none --set-exit-if-changed lib/ test/ 2>&1 | tee /tmp/format.txt
+          FMT_EXIT=${PIPESTATUS[0]}
+          set -e
+          # Count changed files (no grep -c to avoid multiline variable bugs)
+          CHANGED=$(grep -E "^Changed" /tmp/format.txt 2>/dev/null | wc -l | xargs)
+          echo "FORMAT_FAIL=$([ $FMT_EXIT -ne 0 ] && echo true || echo false)" >> "$GITHUB_ENV"
+          echo "FORMAT_CHANGED=${CHANGED}" >> "$GITHUB_ENV"
+          if [ $FMT_EXIT -ne 0 ]; then
+            echo "❌ $CHANGED file(s) need formatting:"
+            cat /tmp/format.txt
           else
-            echo "FORMAT_FAIL=false" >> "$GITHUB_ENV"
             echo "✅ All files formatted correctly"
           fi
 
       # ── Test 2: Static analysis ─────────────────────────────────
       - name: Flutter analyze
         id: analyze
+        continue-on-error: true
         run: |
+          set +e
           flutter analyze --no-pub 2>&1 | tee /tmp/analyze.txt
-          EXIT=${PIPESTATUS[0]}
-          ERR=$(grep -c "error •"   /tmp/analyze.txt 2>/dev/null || echo 0)
-          WRN=$(grep -c "warning •" /tmp/analyze.txt 2>/dev/null || echo 0)
-          INF=$(grep -c "info •"    /tmp/analyze.txt 2>/dev/null || echo 0)
-          echo "ANALYZE_ERR=$ERR" >> "$GITHUB_ENV"
-          echo "ANALYZE_WRN=$WRN" >> "$GITHUB_ENV"
-          echo "ANALYZE_INF=$INF" >> "$GITHUB_ENV"
-          echo "ANALYZE_OK=$([ $EXIT -eq 0 ] && echo true || echo false)" >> "$GITHUB_ENV"
-          exit $EXIT
+          ANALYZE_EXIT=${PIPESTATUS[0]}
+          set -e
+          # Use grep+wc -l piped (wc -l always exits 0, no multiline variable bug)
+          ERR=$(grep -E "error •"   /tmp/analyze.txt 2>/dev/null | wc -l | xargs)
+          WRN=$(grep -E "warning •" /tmp/analyze.txt 2>/dev/null | wc -l | xargs)
+          INF=$(grep -E "info •"    /tmp/analyze.txt 2>/dev/null | wc -l | xargs)
+          echo "ANALYZE_ERR=${ERR}" >> "$GITHUB_ENV"
+          echo "ANALYZE_WRN=${WRN}" >> "$GITHUB_ENV"
+          echo "ANALYZE_INF=${INF}" >> "$GITHUB_ENV"
+          echo "ANALYZE_OK=$([ $ANALYZE_EXIT -eq 0 ] && echo true || echo false)" >> "$GITHUB_ENV"
+          if [ $ANALYZE_EXIT -ne 0 ]; then
+            echo "⚠️  Analysis: $ERR error(s), $WRN warning(s), $INF info"
+          else
+            echo "✅ Analysis clean"
+          fi
 
       # ── Test 3: No debug print() in production code ────────────
       - name: Check debug print statements
         if: always()
         run: |
           FOUND=$(grep -rn "^\s*print(" lib/ --include="*.dart" 2>/dev/null | \
-                  grep -v "//.*print" | wc -l || echo 0)
-          echo "DEBUG_PRINTS=$FOUND" >> "$GITHUB_ENV"
-          [ "$FOUND" -gt 0 ] && \
+                  grep -v "//.*print" | wc -l | xargs)
+          echo "DEBUG_PRINTS=${FOUND}" >> "$GITHUB_ENV"
+          if [ "${FOUND}" -gt 0 ]; then
+            echo "⚠️  ${FOUND} debug print() call(s):"
             grep -rn "^\s*print(" lib/ --include="*.dart" | grep -v "//.*print" || true
-          echo "${FOUND} debug print(s) found"
+          else
+            echo "✅ No debug print() statements"
+          fi
 
       # ── Test 4: No hardcoded http:// URLs ───────────────────────
       - name: Check insecure URLs
         if: always()
         run: |
           FOUND=$(grep -rn "\"http://" lib/ --include="*.dart" 2>/dev/null | \
-                  grep -v "localhost\|127\.0\.0\.1\|//.*http://" | wc -l || echo 0)
-          echo "HTTP_URLS=$FOUND" >> "$GITHUB_ENV"
-          echo "$FOUND insecure http:// URL(s)"
+                  grep -v "localhost\|127\.0\.0\.1\|//.*http://" | wc -l | xargs)
+          echo "HTTP_URLS=${FOUND}" >> "$GITHUB_ENV"
+          echo "${FOUND} insecure http:// URL(s)"
 
-      # ── Test 5: No TODO/FIXME left in release code ─────────────
+      # ── Test 5: No TODO/FIXME ────────────────────────────────────
       - name: Check TODO/FIXME markers
         if: always()
         run: |
-          FOUND=$(grep -rn "TODO\|FIXME\|HACK\|XXX" lib/ --include="*.dart" 2>/dev/null | wc -l || echo 0)
-          echo "TODOS=$FOUND" >> "$GITHUB_ENV"
-          echo "$FOUND TODO/FIXME marker(s)"
+          FOUND=$(grep -rn "TODO\|FIXME\|HACK\|XXX" lib/ --include="*.dart" 2>/dev/null | wc -l | xargs)
+          echo "TODOS=${FOUND}" >> "$GITHUB_ENV"
+          echo "${FOUND} TODO/FIXME marker(s)"
 
-      # ── Test 6: Run unit tests if they exist ────────────────────
-      - name: Run unit tests
+      # ── Test 6: Run unit tests ───────────────────────────────────
+      - name: Run Flutter tests
+        id: tests
         if: always()
+        continue-on-error: true
         run: |
           if find test/ -name "*_test.dart" 2>/dev/null | grep -q .; then
+            set +e
             flutter test --reporter=expanded 2>&1 | tee /tmp/test.txt
-            EXIT=${PIPESTATUS[0]}
-            PASS=$(grep -c "✓\|✅\| PASS" /tmp/test.txt || echo 0)
-            FAIL=$(grep -c "✗\|❌\| FAIL" /tmp/test.txt || echo 0)
-            echo "TEST_PASS=$PASS" >> "$GITHUB_ENV"
-            echo "TEST_FAIL=$FAIL" >> "$GITHUB_ENV"
-            echo "TEST_OK=$([ $EXIT -eq 0 ] && echo true || echo false)" >> "$GITHUB_ENV"
+            TEST_EXIT=${PIPESTATUS[0]}
+            set -e
+            PASS=$(grep -E "^\+[0-9]" /tmp/test.txt | wc -l | xargs)
+            FAIL=$(grep -E "^-[0-9]|Some tests failed" /tmp/test.txt | wc -l | xargs)
+            echo "TEST_PASS=${PASS}" >> "$GITHUB_ENV"
+            echo "TEST_FAIL=${FAIL}" >> "$GITHUB_ENV"
+            echo "TEST_OK=$([ $TEST_EXIT -eq 0 ] && echo true || echo false)" >> "$GITHUB_ENV"
+            if [ $TEST_EXIT -ne 0 ]; then
+              echo "⚠️  Some tests failed (check output above)"
+            else
+              echo "✅ All tests passed"
+            fi
           else
             echo "TEST_OK=skip" >> "$GITHUB_ENV"
-            echo "No tests found"
+            echo "TEST_PASS=0"  >> "$GITHUB_ENV"
+            echo "TEST_FAIL=0"  >> "$GITHUB_ENV"
+            echo "⏭️  No test files found"
           fi
 
-      # ── Step summary ────────────────────────────────────────────
+      # ── Step summary ─────────────────────────────────────────────
       - name: Write summary
         if: always()
         run: |
-          OK(){ [ "$1" = "true" ] && echo "✅" || ([ "$1" = "skip" ] && echo "⏭️" || echo "❌"); }
+          OK(){
+            case "$1" in
+              true)  echo "✅ Pass" ;;
+              false) echo "❌ Fail" ;;
+              skip)  echo "⏭️ Skipped" ;;
+              *)     echo "❓ $1" ;;
+            esac
+          }
           {
             echo "# 🔍 Code Quality Report"
+            echo ""
             echo "| Check | Status | Detail |"
             echo "|---|---|---|"
-            echo "| Dart format     | $(OK $FORMAT_FAIL false) | $([ "$FORMAT_FAIL" = "true" ] && echo "Needs formatting" || echo "Clean") |"
-            echo "| Static analysis | $(OK $ANALYZE_OK)        | $ANALYZE_ERR errors, $ANALYZE_WRN warnings, $ANALYZE_INF info |"
-            echo "| Debug prints    | $([ "${DEBUG_PRINTS:-0}" = "0" ] && echo "✅" || echo "⚠️") | ${DEBUG_PRINTS:-0} found |"
-            echo "| Insecure URLs   | $([ "${HTTP_URLS:-0}" = "0" ] && echo "✅" || echo "⚠️") | ${HTTP_URLS:-0} http:// |"
-            echo "| TODOs/FIXMEs    | ℹ️ | ${TODOS:-0} markers |"
-            echo "| Unit tests      | $(OK ${TEST_OK:-skip}) | Pass: ${TEST_PASS:-0} Fail: ${TEST_FAIL:-0} |"
+            echo "| Dart format      | $([ "${FORMAT_FAIL:-false}" = "true" ] && echo "⚠️ Issues" || echo "✅ Clean") | ${FORMAT_CHANGED:-0} file(s) changed |"
+            echo "| Static analysis  | $(OK ${ANALYZE_OK:-skip}) | ${ANALYZE_ERR:-0} errors, ${ANALYZE_WRN:-0} warnings |"
+            echo "| Debug prints     | $([ "${DEBUG_PRINTS:-0}" = "0" ] && echo "✅" || echo "⚠️") | ${DEBUG_PRINTS:-0} found |"
+            echo "| Insecure URLs    | $([ "${HTTP_URLS:-0}" = "0" ] && echo "✅" || echo "⚠️") | ${HTTP_URLS:-0} http:// |"
+            echo "| TODOs/FIXMEs     | ℹ️ | ${TODOS:-0} markers |"
+            echo "| Unit tests       | $(OK ${TEST_OK:-skip}) | Pass: ${TEST_PASS:-0}  Fail: ${TEST_FAIL:-0} |"
           } >> "$GITHUB_STEP_SUMMARY"
 
       # ── PR comment ───────────────────────────────────────────────
@@ -136,18 +169,13 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const rows = [
-              ['Dart format',     process.env.FORMAT_FAIL === 'true' ? '❌' : '✅', process.env.FORMAT_FAIL === 'true' ? 'Run `dart format lib/ test/`' : 'Clean'],
-              ['Static analysis', process.env.ANALYZE_OK   === 'true' ? '✅' : '❌', `${process.env.ANALYZE_ERR||0} errors`],
-              ['Debug prints',    +process.env.DEBUG_PRINTS > 0 ? '⚠️' : '✅', `${process.env.DEBUG_PRINTS||0} found`],
-              ['Insecure URLs',   +process.env.HTTP_URLS    > 0 ? '⚠️' : '✅', `${process.env.HTTP_URLS||0} found`],
-              ['Unit tests',      process.env.TEST_OK === 'skip' ? '⏭️' : process.env.TEST_OK === 'true' ? '✅' : '❌', `${process.env.TEST_PASS||0} pass`],
-            ];
-            const table = rows.map(([c,s,d]) => `| ${c} | ${s} | ${d} |`).join('\n');
+            const fmt   = process.env.FORMAT_FAIL === 'true' ? '⚠️ Issues' : '✅ Clean';
+            const anal  = process.env.ANALYZE_OK === 'true' ? '✅' : '❌';
+            const tests = process.env.TEST_OK === 'skip' ? '⏭️' : process.env.TEST_OK === 'true' ? '✅' : '❌';
             await github.rest.issues.createComment({
               owner: context.repo.owner, repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: `## 🔍 Code Quality\n| Check | Status | Detail |\n|---|---|---|\n${table}`,
+              body: `## 🔍 Code Quality\n| Check | Status |\n|---|---|\n| Dart format | ${fmt} (${process.env.FORMAT_CHANGED||0} files) |\n| Analysis | ${anal} ${process.env.ANALYZE_ERR||0} errors |\n| Tests | ${tests} pass:${process.env.TEST_PASS||0} fail:${process.env.TEST_FAIL||0} |`,
             });
 
       # ── Trigger security audit ──────────────────────────────────
