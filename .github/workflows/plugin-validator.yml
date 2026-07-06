@@ -32,127 +32,120 @@ jobs:
           echo "HTTP: $CODE"
           if [ "$CODE" = "200" ]; then
             python3 -m json.tool /tmp/repositories.json
-            COUNT=$(python3 -c "
+            COUNT=$(python3 - <<'PY'
 import json
 d = json.load(open('/tmp/repositories.json'))
-repos = d.get('repositories', [])
-print(len(repos))
-")
+print(len(d.get('repositories', [])))
+PY
+)
             echo "REPO_COUNT=${COUNT}" >> "$GITHUB_ENV"
             echo "ok=true" >> "$GITHUB_OUTPUT"
           else
             echo "REPO_COUNT=0" >> "$GITHUB_ENV"
             echo "ok=false" >> "$GITHUB_OUTPUT"
-            echo "❌ Could not fetch live repositories.json (HTTP $CODE)"
+            echo "Could not fetch live repositories.json (HTTP $CODE)"
           fi
 
       # ── Test 2: Validate each plugin repository manifest ────────
       - name: Validate each plugin repository manifest
-        if: env.REPO_COUNT != '0'
+        if: ${{ env.REPO_COUNT != '0' }}
         run: |
-          python3 << 'PYEOF'
-          import json, urllib.request, urllib.error, sys
+          python3 - << 'PYEOF'
+import json, urllib.request, urllib.error, sys
 
-          data   = json.load(open('/tmp/repositories.json'))
-          repos  = data.get('repositories', [])
-          errors = []
-          total  = 0
+data   = json.load(open('/tmp/repositories.json'))
+repos  = data.get('repositories', [])
+errors = []
+total  = 0
 
-          for repo in repos:
-              url = repo.get('url', '')
-              if not url:
-                  errors.append(f"Entry has no url: {repo}")
-                  continue
-              print(f"\n🔍 Checking: {url}")
-              try:
-                  req = urllib.request.Request(url, headers={'User-Agent': 'nasbeat-ci/1.0'})
-                  with urllib.request.urlopen(req, timeout=20) as r:
-                      raw  = r.read()
-                      mani = json.loads(raw)
-                      total += 1
+for repo in repos:
+    url = repo.get('url', '')
+    if not url:
+        errors.append(f"Entry has no url: {repo}")
+        continue
+    print(f"\nChecking: {url}")
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'nasbeat-ci/1.0'})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            mani   = json.loads(r.read())
+            total += 1
+            name    = mani.get('name', mani.get('title', '?'))
+            plugins = mani.get('plugins', [])
+            print(f"  OK name: {name}")
+            print(f"  OK plugins: {len(plugins)}")
+            for p in plugins:
+                pid    = p.get('id', '')
+                ver    = p.get('version', '')
+                dl     = p.get('download_url', p.get('downloadUrl', ''))
+                if not pid:
+                    errors.append(f"Plugin missing 'id' in {url}")
+                if not ver:
+                    errors.append(f"Plugin '{pid}' missing 'version' in {url}")
+                if dl and not dl.startswith('https://'):
+                    errors.append(f"Plugin '{pid}' download URL not HTTPS: {dl}")
+    except urllib.error.HTTPError as e:
+        errors.append(f"HTTP {e.code} fetching {url}")
+    except Exception as e:
+        errors.append(f"Error fetching {url}: {e}")
 
-                      name    = mani.get('name',    mani.get('title', '?'))
-                      plugins = mani.get('plugins', [])
-                      print(f"  ✅ Name: {name}")
-                      print(f"  ✅ Plugins: {len(plugins)}")
-
-                      for p in plugins:
-                          pid     = p.get('id', '')
-                          version = p.get('version', '')
-                          dl_url  = p.get('download_url', p.get('downloadUrl', ''))
-                          if not pid:
-                              errors.append(f"Plugin missing 'id' in {url}")
-                          if not version:
-                              errors.append(f"Plugin '{pid}' missing 'version' in {url}")
-                          if dl_url and not dl_url.startswith('https://'):
-                              errors.append(f"Plugin '{pid}' download URL not HTTPS: {dl_url}")
-
-              except urllib.error.HTTPError as e:
-                  errors.append(f"HTTP {e.code} fetching {url}")
-              except Exception as e:
-                  errors.append(f"Error fetching {url}: {e}")
-
-          print(f"\n{'='*50}")
-          print(f"Checked {total}/{len(repos)} repository manifests")
-          if errors:
-              print(f"\n❌ {len(errors)} error(s):")
-              for e in errors:
-                  print(f"  • {e}")
-              sys.exit(1)
-          else:
-              print("✅ All plugin manifests valid")
-          PYEOF
+print(f"\nChecked {total}/{len(repos)} repository manifests")
+if errors:
+    print(f"\nFAIL: {len(errors)} error(s):")
+    for e in errors:
+        print(f"  - {e}")
+    sys.exit(1)
+else:
+    print("All plugin manifests valid")
+PYEOF
 
       # ── Test 3: Spot-check plugin download URLs ─────────────────
       - name: Spot-check plugin download URLs
-        if: env.REPO_COUNT != '0'
+        if: ${{ env.REPO_COUNT != '0' }}
         continue-on-error: true
         run: |
-          python3 << 'PYEOF'
-          import json, urllib.request, urllib.error, sys
+          python3 - << 'PYEOF'
+import json, urllib.request, urllib.error
 
-          data    = json.load(open('/tmp/repositories.json'))
-          checked = 0
+data    = json.load(open('/tmp/repositories.json'))
+checked = 0
 
-          for repo in data.get('repositories', []):
-              url = repo.get('url', '')
-              if not url:
-                  continue
-              try:
-                  req = urllib.request.Request(url, headers={'User-Agent': 'nasbeat-ci/1.0'})
-                  with urllib.request.urlopen(req, timeout=20) as r:
-                      mani = json.loads(r.read())
+for repo in data.get('repositories', []):
+    url = repo.get('url', '')
+    if not url:
+        continue
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'nasbeat-ci/1.0'})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            mani = json.loads(r.read())
+        for p in mani.get('plugins', [])[:2]:
+            dl = p.get('download_url', p.get('downloadUrl', ''))
+            if not dl:
+                continue
+            try:
+                req2 = urllib.request.Request(
+                    dl, method='HEAD',
+                    headers={'User-Agent': 'nasbeat-ci/1.0'}
+                )
+                with urllib.request.urlopen(req2, timeout=15) as r2:
+                    sz = r2.headers.get('Content-Length', '?')
+                    print(f"  OK {p.get('id','?')} -> {sz} bytes")
+                    checked += 1
+            except urllib.error.HTTPError as e:
+                print(f"  WARN {p.get('id','?')} HEAD -> HTTP {e.code}")
+            except Exception as e:
+                print(f"  WARN {p.get('id','?')} HEAD -> {e}")
+    except Exception as e:
+        print(f"  WARN Could not fetch manifest {url}: {e}")
 
-                  for p in mani.get('plugins', [])[:2]:
-                      dl = p.get('download_url', p.get('downloadUrl', ''))
-                      if not dl:
-                          continue
-                      try:
-                          req2 = urllib.request.Request(
-                              dl, method='HEAD',
-                              headers={'User-Agent': 'nasbeat-ci/1.0'}
-                          )
-                          with urllib.request.urlopen(req2, timeout=15) as r2:
-                              sz = r2.headers.get('Content-Length', '?')
-                              print(f"  ✅ {p.get('id','?')} → {dl} ({sz} bytes)")
-                              checked += 1
-                      except urllib.error.HTTPError as e:
-                          print(f"  ⚠️  {p.get('id','?')} HEAD → HTTP {e.code}")
-                      except Exception as e:
-                          print(f"  ⚠️  {p.get('id','?')} HEAD → {e}")
-
-              except Exception as e:
-                  print(f"  ⚠️  Could not fetch manifest {url}: {e}")
-
-          print(f"\nSpot-checked {checked} download URL(s)")
-          PYEOF
+print(f"\nSpot-checked {checked} download URL(s)")
+PYEOF
 
       # ── Summary ─────────────────────────────────────────────────
       - name: Summary
         if: always()
         run: |
           {
-            echo "# 🧩 Plugin Validator"
+            echo "# Plugin Validator"
             echo ""
             echo "| Item | Value |"
             echo "|---|---|"
