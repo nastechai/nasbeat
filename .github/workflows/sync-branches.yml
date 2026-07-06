@@ -1,0 +1,85 @@
+name: "Sync Branches"
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Publish Release"]
+    types: [completed]
+
+permissions:
+  contents: write
+  actions:  write
+
+jobs:
+  sync:
+    name: "Sync main → Separate branch"
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: main
+
+      # ── Test 1: Verify Separate branch exists ─────────────────────
+      - name: Check Separate branch exists
+        id: check_branch
+        run: |
+          if git ls-remote --exit-code --heads origin Separate > /dev/null 2>&1; then
+            echo "✅ Separate branch exists"
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "⚠️  Separate branch does not exist — creating it"
+            git checkout -b Separate
+            git push origin Separate
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── Test 2: Check how far behind Separate is ─────────────────
+      - name: Measure branch divergence
+        run: |
+          git fetch origin Separate
+          BEHIND=$(git rev-list --count origin/Separate..origin/main 2>/dev/null || echo 0)
+          AHEAD=$(git rev-list --count origin/main..origin/Separate 2>/dev/null || echo 0)
+          echo "BEHIND=$BEHIND" >> "$GITHUB_ENV"
+          echo "AHEAD=$AHEAD"   >> "$GITHUB_ENV"
+          echo "Separate is $BEHIND commits behind main, $AHEAD ahead"
+
+      # ── Sync main → Separate (fast-forward or merge) ─────────────
+      - name: Sync Separate with main
+        run: |
+          git config user.name  "nasbeat-bot"
+          git config user.email "bot@nastechai.dev"
+
+          git checkout -B Separate origin/Separate
+          git merge origin/main --no-edit -m "chore(sync): merge main → Separate [skip ci]" || {
+            # On conflict, prefer main
+            git checkout --theirs .
+            git add -A
+            git commit -m "chore(sync): auto-resolve conflicts, prefer main [skip ci]"
+          }
+          git push origin Separate
+          echo "✅ Separate synced with main"
+
+      # ── Test 3: Verify Separate is now up-to-date ─────────────────
+      - name: Verify sync
+        run: |
+          git fetch origin
+          BEHIND=$(git rev-list --count origin/Separate..origin/main 2>/dev/null || echo 0)
+          echo "Separate is now $BEHIND commit(s) behind main"
+          [ "$BEHIND" -eq 0 ] && echo "✅ Fully synced" || echo "⚠️  $BEHIND commit(s) behind"
+
+      - name: Summary
+        run: |
+          {
+            echo "# 🔀 Branch Sync"
+            echo ""
+            echo "| Branch | Status |"
+            echo "|---|---|"
+            echo "| main     | source |"
+            echo "| Separate | ✅ synced (was ${{ env.BEHIND }} commit(s) behind) |"
+          } >> "$GITHUB_STEP_SUMMARY"
