@@ -1,0 +1,104 @@
+name: "Cleanup Artifacts"
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Publish Release"]
+    types: [completed]
+  schedule:
+    - cron: '0 2 * * 0'   # weekly Sunday 02:00 UTC
+
+permissions:
+  actions: write
+
+jobs:
+  cleanup:
+    name: "Delete Old Build Artifacts"
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── Test 1: List all current artifacts ────────────────────────
+      - name: List all artifacts
+        id: list
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data } = await github.rest.actions.listArtifactsForRepo({
+              owner:    context.repo.owner,
+              repo:     context.repo.repo,
+              per_page: 100,
+            });
+
+            const artifacts = data.artifacts;
+            console.log(`Total artifacts: ${artifacts.length}`);
+
+            // Log all artifacts with size
+            let totalBytes = 0;
+            for (const a of artifacts) {
+              totalBytes += a.size_in_bytes;
+              console.log(`  ${a.name} | ${(a.size_in_bytes/1024/1024).toFixed(1)} MB | ${a.created_at} | expired: ${a.expired}`);
+            }
+            console.log(`Total size: ${(totalBytes/1024/1024).toFixed(1)} MB`);
+
+            core.setOutput('total_count', artifacts.length);
+            core.setOutput('total_mb',    (totalBytes/1024/1024).toFixed(1));
+            return artifacts;
+
+      # ── Test 2: Keep only last 5 per platform, delete older ──────
+      - name: Delete old artifacts (keep last 5 per name)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data } = await github.rest.actions.listArtifactsForRepo({
+              owner: context.repo.owner, repo: context.repo.repo, per_page: 100,
+            });
+
+            const artifacts = data.artifacts.filter(a => !a.expired);
+
+            // Group by platform type
+            const groups = {};
+            for (const a of artifacts) {
+              const key = a.name.replace(/v[\d.]+/, 'vX');  // normalize version
+              if (!groups[key]) groups[key] = [];
+              groups[key].push(a);
+            }
+
+            let deleted = 0, freedBytes = 0;
+            const KEEP = 5;
+
+            for (const [key, group] of Object.entries(groups)) {
+              // Sort by created_at descending (newest first)
+              group.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+              const toDelete = group.slice(KEEP);  // everything beyond last 5
+              for (const artifact of toDelete) {
+                try {
+                  await github.rest.actions.deleteArtifact({
+                    owner:       context.repo.owner,
+                    repo:        context.repo.repo,
+                    artifact_id: artifact.id,
+                  });
+                  freedBytes += artifact.size_in_bytes;
+                  deleted++;
+                  console.log(`Deleted: ${artifact.name} (${artifact.created_at})`);
+                } catch (e) {
+                  console.log(`Could not delete ${artifact.name}: ${e.message}`);
+                }
+              }
+            }
+
+            const freedMB = (freedBytes / 1024 / 1024).toFixed(1);
+            console.log(`\nDeleted ${deleted} artifact(s), freed ${freedMB} MB`);
+
+            const summary = [
+              '# 🗑️ Artifact Cleanup',
+              '',
+              `| Metric | Value |`,
+              `|---|---|`,
+              `| Total before | ${{ steps.list.outputs.total_count }} artifacts |`,
+              `| Total size   | ${{ steps.list.outputs.total_mb }} MB |`,
+              `| Deleted      | ${deleted} |`,
+              `| Freed        | ${freedMB} MB |`,
+            ].join('\n');
+
+            core.summary.addRaw(summary).write();
