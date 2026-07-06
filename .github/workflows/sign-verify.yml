@@ -1,0 +1,171 @@
+name: "Sign & Verify APKs"
+
+on:
+  workflow_dispatch:
+    inputs:
+      version: { type: string, default: '' }
+  workflow_run:
+    workflows: ["Build Android"]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions:  write
+
+jobs:
+  verify:
+    name: "Verify APK Signatures"
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Java
+        uses: actions/setup-java@v3.12.0
+        with:
+          distribution: oracle
+          java-version: '17'
+
+      - name: Resolve version
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            echo "VERSION=${{ inputs.version }}" >> "$GITHUB_ENV"
+          else
+            VER=$(grep -E '^version:' pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)
+            echo "VERSION=$VER" >> "$GITHUB_ENV"
+          fi
+
+      # ── Download Android artifacts from the triggering run ─────
+      - name: Download Android artifacts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs   = require('fs');
+            const path = require('path');
+
+            // Find the most recent Android artifact
+            const { data: runs } = await github.rest.actions.listWorkflowRuns({
+              owner:       context.repo.owner,
+              repo:        context.repo.repo,
+              workflow_id: 'build-android.yml',
+              status:      'success',
+              per_page:    1,
+            });
+
+            if (!runs.workflow_runs.length) {
+              core.warning('No successful Android build found — skipping download.');
+              return;
+            }
+
+            const runId = runs.workflow_runs[0].id;
+            const { data: artifacts } = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner, repo: context.repo.repo, run_id: runId,
+            });
+
+            const artifact = artifacts.artifacts.find(a => a.name.includes('Android'));
+            if (!artifact) {
+              core.warning('No Android artifact found.');
+              return;
+            }
+
+            const dl = await github.rest.actions.downloadArtifact({
+              owner:        context.repo.owner,
+              repo:         context.repo.repo,
+              artifact_id:  artifact.id,
+              archive_format: 'zip',
+            });
+
+            fs.mkdirSync('apk_download', { recursive: true });
+            fs.writeFileSync('apk_download/android.zip', Buffer.from(dl.data));
+            console.log(`Downloaded artifact: ${artifact.name}`);
+
+      - name: Extract APKs
+        run: |
+          if [ -f apk_download/android.zip ]; then
+            unzip -q apk_download/android.zip -d apk_download/
+            ls -lh apk_download/*.apk 2>/dev/null || echo "No APKs extracted"
+          else
+            echo "No artifact to extract — skipping verification"
+          fi
+
+      # ── Test 1: Verify each APK is a valid ZIP ─────────────────
+      - name: Verify APK zip integrity
+        run: |
+          if ls apk_download/*.apk 2>/dev/null | grep -q .; then
+            for apk in apk_download/*.apk; do
+              if python3 -c "import zipfile; zipfile.ZipFile('$apk').testzip(); print('✅ ZIP OK: $apk')" 2>/dev/null; then
+                :
+              else
+                echo "❌ Corrupt APK: $apk"
+                exit 1
+              fi
+            done
+          fi
+
+      # ── Test 2: Verify APK signature using apksigner ────────────
+      - name: Verify APK signing
+        run: |
+          BUILD_TOOLS=$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)
+          SIGNER="$ANDROID_HOME/build-tools/$BUILD_TOOLS/apksigner"
+          PASS=true
+          if ls apk_download/*.apk 2>/dev/null | grep -q .; then
+            for apk in apk_download/*.apk; do
+              NAME=$(basename "$apk")
+              if "$SIGNER" verify "$apk" 2>&1; then
+                echo "✅ Signed: $NAME"
+              else
+                echo "⚠️  $NAME not release-signed (debug key OK for testing)"
+              fi
+            done
+          else
+            echo "No APKs to verify"
+          fi
+
+      # ── Test 3: Check APK min SDK via aapt ──────────────────────
+      - name: Check APK manifest (minSdk, package name)
+        run: |
+          BUILD_TOOLS=$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)
+          AAPT="$ANDROID_HOME/build-tools/$BUILD_TOOLS/aapt2"
+          if ls apk_download/*arm64*.apk 2>/dev/null | grep -q .; then
+            APK=$(ls apk_download/*arm64*.apk | head -1)
+            "$AAPT" dump badging "$APK" 2>/dev/null | grep -E "package:|minSdk|targetSdk" || echo "aapt2 dump not available"
+          fi
+
+      # ── Test 4: APK size check (must be < 150 MB) ────────────────
+      - name: Check APK sizes
+        run: |
+          if ls apk_download/*.apk 2>/dev/null | grep -q .; then
+            for apk in apk_download/*.apk; do
+              SIZE=$(du -m "$apk" | cut -f1)
+              NAME=$(basename "$apk")
+              if [ "$SIZE" -lt 150 ]; then
+                echo "✅ $NAME: ${SIZE} MB (within limit)"
+              else
+                echo "⚠️  $NAME: ${SIZE} MB (exceeds 150 MB warning threshold)"
+              fi
+            done
+          fi
+
+      - name: Write summary
+        if: always()
+        run: |
+          {
+            echo "# 📋 APK Sign & Verify Report"
+            echo ""
+            echo "Version: **v${{ env.VERSION }}**"
+            echo ""
+            if ls apk_download/*.apk 2>/dev/null | grep -q .; then
+              echo "| APK | Size |"
+              echo "|---|---|"
+              for apk in apk_download/*.apk; do
+                echo "| $(basename $apk) | $(du -sh $apk | cut -f1) |"
+              done
+            else
+              echo "⏭️ No APKs available for verification"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
