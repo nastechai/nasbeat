@@ -1,0 +1,169 @@
+name: "Security Audit"
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Code Quality"]
+    types: [completed]
+  schedule:
+    - cron: '0 3 * * 0'   # weekly Sunday 03:00 UTC
+
+permissions:
+  contents: read
+  issues:   write
+  actions:  write
+
+jobs:
+  audit:
+    name: "Security Scan"
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - run: flutter pub get
+
+      # ── Test 1: Scan for hardcoded secrets patterns ─────────────
+      - name: Scan for hardcoded secrets
+        id: secrets
+        run: |
+          PATTERNS=(
+            "password\s*=\s*['\"][^'\"]{4,}"
+            "api_key\s*=\s*['\"][^'\"]{8,}"
+            "secret\s*=\s*['\"][^'\"]{8,}"
+            "token\s*=\s*['\"][^'\"]{8,}"
+            "private_key"
+            "BEGIN RSA PRIVATE"
+          )
+          FOUND=0
+          for PAT in "${PATTERNS[@]}"; do
+            HITS=$(grep -rni "$PAT" lib/ --include="*.dart" 2>/dev/null | \
+                   grep -v "//.*$PAT\|SettingKey\|_key =\|label\|icon" | wc -l || echo 0)
+            FOUND=$((FOUND + HITS))
+          done
+          echo "SECRET_HITS=$FOUND" >> "$GITHUB_ENV"
+          echo "$FOUND potential hardcoded secret(s)"
+
+      # ── Test 2: Check for outdated/vulnerable packages ──────────
+      - name: Audit dependencies
+        id: deps
+        run: |
+          flutter pub outdated --json 2>/dev/null > /tmp/outdated.json || echo '{"packages":[]}' > /tmp/outdated.json
+          OUTDATED=$(python3 -c "
+          import json
+          d = json.load(open('/tmp/outdated.json'))
+          pkgs = d.get('packages', [])
+          out = [p['package'] for p in pkgs
+                 if p.get('upgradable',{}).get('version') and
+                    p.get('current',{}).get('version') != p.get('upgradable',{}).get('version')]
+          print(len(out))
+          " 2>/dev/null || echo 0)
+          echo "OUTDATED_COUNT=$OUTDATED" >> "$GITHUB_ENV"
+          echo "$OUTDATED outdated packages"
+
+      # ── Test 3: Detect use of deprecated/insecure APIs ─────────
+      - name: Check deprecated Dart APIs
+        id: deprecated
+        run: |
+          DEPRECATED_PATTERNS=(
+            "dart:html"
+            "HttpClient\(\)"
+            "allowInterop"
+            "js_util"
+          )
+          FOUND=0
+          for PAT in "${DEPRECATED_PATTERNS[@]}"; do
+            HITS=$(grep -rn "$PAT" lib/ --include="*.dart" 2>/dev/null | wc -l || echo 0)
+            FOUND=$((FOUND + HITS))
+          done
+          echo "DEPRECATED_HITS=$FOUND" >> "$GITHUB_ENV"
+          echo "$FOUND deprecated API usage(s)"
+
+      # ── Test 4: Verify no .env or secret files committed ────────
+      - name: Check for committed secret files
+        id: files
+        run: |
+          SECRET_FILES=(".env" "*.pem" "*.p12" "*.jks" "key.properties" "google-services.json")
+          FOUND=0
+          for PAT in "${SECRET_FILES[@]}"; do
+            HITS=$(git ls-files | grep -iE "$(echo $PAT | sed 's/\*/.*/g')" 2>/dev/null | \
+                   grep -v "\.github\|\.gitignore\|android/nasbeat\.jks" | wc -l || echo 0)
+            FOUND=$((FOUND + HITS))
+          done
+          echo "SECRET_FILES=$FOUND" >> "$GITHUB_ENV"
+          echo "$FOUND sensitive file(s) tracked by git"
+
+      # ── Test 5: Verify HTTPS used for all API endpoints ─────────
+      - name: Check for cleartext HTTP in Dart files
+        run: |
+          FOUND=$(grep -rn "\"http://" lib/ --include="*.dart" 2>/dev/null | \
+                  grep -v "localhost\|127\.0\.0\.1\|//.*http://" | wc -l || echo 0)
+          echo "CLEARTEXT_HTTP=$FOUND" >> "$GITHUB_ENV"
+          echo "$FOUND cleartext http:// URL(s) in source"
+
+      # ── Test 6: Validate plugin repo is HTTPS ───────────────────
+      - name: Verify plugin repo uses HTTPS
+        run: |
+          URL=$(grep -r "hostedRepositoriesUrl" lib/ --include="*.dart" | \
+                grep -o "https://[^'\"]*" | head -1 || echo "")
+          if echo "$URL" | grep -q "^https://"; then
+            echo "✅ Plugin repo URL uses HTTPS: $URL"
+          else
+            echo "⚠️  Plugin repo URL not found or not HTTPS"
+          fi
+
+      # ── Summary ─────────────────────────────────────────────────
+      - name: Write security summary
+        if: always()
+        run: |
+          SCORE=100
+          [ "${SECRET_HITS:-0}"    -gt 0 ] && SCORE=$((SCORE-30))
+          [ "${SECRET_FILES:-0}"   -gt 0 ] && SCORE=$((SCORE-20))
+          [ "${CLEARTEXT_HTTP:-0}" -gt 0 ] && SCORE=$((SCORE-15))
+          [ "${OUTDATED_COUNT:-0}" -gt 5 ] && SCORE=$((SCORE-10))
+          {
+            echo "# 🔐 Security Audit Report"
+            echo ""
+            echo "**Security Score: ${SCORE}/100**"
+            echo ""
+            echo "| Check | Status | Detail |"
+            echo "|---|---|---|"
+            echo "| Hardcoded secrets   | $([ "${SECRET_HITS:-0}"    = "0" ] && echo "✅" || echo "❌") | ${SECRET_HITS:-0} pattern(s) |"
+            echo "| Committed secrets   | $([ "${SECRET_FILES:-0}"   = "0" ] && echo "✅" || echo "❌") | ${SECRET_FILES:-0} file(s) |"
+            echo "| Cleartext HTTP      | $([ "${CLEARTEXT_HTTP:-0}" = "0" ] && echo "✅" || echo "⚠️") | ${CLEARTEXT_HTTP:-0} URL(s) |"
+            echo "| Deprecated APIs     | $([ "${DEPRECATED_HITS:-0}"= "0" ] && echo "✅" || echo "ℹ️") | ${DEPRECATED_HITS:-0} usage(s) |"
+            echo "| Outdated packages   | $([ "${OUTDATED_COUNT:-0}" -lt 5 ] && echo "✅" || echo "⚠️") | ${OUTDATED_COUNT:-0} outdated |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Create issue on critical findings ───────────────────────
+      - name: Create security issue
+        if: env.SECRET_HITS != '0' || env.SECRET_FILES != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner, repo: context.repo.repo,
+              title: `🔐 Security Alert — ${new Date().toISOString().split('T')[0]}`,
+              body: [
+                '## Security Audit Found Issues',
+                '',
+                `| Check | Count |`,
+                `|---|---|`,
+                `| Possible hardcoded secrets | ${process.env.SECRET_HITS || 0} |`,
+                `| Tracked secret files       | ${process.env.SECRET_FILES || 0} |`,
+                `| Cleartext HTTP URLs        | ${process.env.CLEARTEXT_HTTP || 0} |`,
+                '',
+                '**Action required:** Review and remediate before next release.',
+                `_Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}_`,
+              ].join('\n'),
+              labels: ['security', 'high-priority'],
+            });
