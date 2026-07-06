@@ -1,0 +1,132 @@
+name: "Update Changelog"
+
+on:
+  workflow_dispatch:
+    inputs:
+      version: { type: string, default: '' }
+  workflow_run:
+    workflows: ["Publish Release"]
+    types: [completed]
+
+permissions:
+  contents: write
+  actions:  write
+
+jobs:
+  changelog:
+    name: "Generate & Commit CHANGELOG.md"
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: main
+
+      - name: Resolve version
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            echo "VERSION=${{ inputs.version }}" >> "$GITHUB_ENV"
+          else
+            VER=$(grep -E '^version:' pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)
+            echo "VERSION=$VER" >> "$GITHUB_ENV"
+          fi
+
+      - name: Generate CHANGELOG section
+        run: |
+          git fetch --tags --force
+          TAG="v${{ env.VERSION }}"
+          PREV=$(git tag -l "v[0-9]*.[0-9]*.[0-9]*" | sort -V | grep -v "^${TAG}$" | tail -1)
+          DATE=$(date -u +'%Y-%m-%d')
+
+          [ -z "$PREV" ] && LOG=$(git log --format="%s|%h" HEAD | head -80) || \
+                            LOG=$(git log --format="%s|%h" "${PREV}..${TAG}" | head -80)
+
+          FEATS="" FIXES="" PERF="" REFAC="" DOCS="" CHORES="" OTHERS=""
+
+          while IFS='|' read -r MSG SHA; do
+            [ -z "$MSG" ] && continue
+            echo "$MSG" | grep -q "\[skip ci\]" && continue
+            LINE="- ${MSG} (\`${SHA}\`)"
+            if   echo "$MSG" | grep -qiE '^feat(\(.*\))?!?:';     then FEATS="${FEATS}\n${LINE}"
+            elif echo "$MSG" | grep -qiE '^fix(\(.*\))?!?:';      then FIXES="${FIXES}\n${LINE}"
+            elif echo "$MSG" | grep -qiE '^perf(\(.*\))?!?:';     then PERF="${PERF}\n${LINE}"
+            elif echo "$MSG" | grep -qiE '^refactor(\(.*\))?!?:'; then REFAC="${REFAC}\n${LINE}"
+            elif echo "$MSG" | grep -qiE '^docs(\(.*\))?!?:';     then DOCS="${DOCS}\n${LINE}"
+            elif echo "$MSG" | grep -qiE '^(chore|ci|build|style|test)(\(.*\))?!?:'; then CHORES="${CHORES}\n${LINE}"
+            else OTHERS="${OTHERS}\n${LINE}"; fi
+          done <<< "$LOG"
+
+          {
+            echo "## [${TAG}] — ${DATE}"
+            echo ""
+            [ -n "$FEATS"  ] && printf '### ✨ Features\n%b\n\n'      "$FEATS"
+            [ -n "$FIXES"  ] && printf '### 🐛 Bug Fixes\n%b\n\n'     "$FIXES"
+            [ -n "$PERF"   ] && printf '### ⚡ Performance\n%b\n\n'   "$PERF"
+            [ -n "$REFAC"  ] && printf '### ♻️  Refactoring\n%b\n\n'  "$REFAC"
+            [ -n "$DOCS"   ] && printf '### 📚 Documentation\n%b\n\n' "$DOCS"
+            [ -n "$CHORES" ] && printf '### 🔧 Maintenance\n%b\n\n'   "$CHORES"
+            [ -n "$OTHERS" ] && printf '### 📝 Other\n%b\n\n'         "$OTHERS"
+            [ -n "$PREV"   ] && echo "**Compare:** https://github.com/${{ github.repository }}/compare/${PREV}...${TAG}"
+          } > /tmp/new_section.md
+
+          # ── Test: new section must have content ──────────────────
+          LINES=$(wc -l < /tmp/new_section.md)
+          [ "$LINES" -gt 3 ] || echo "⚠️  Changelog section is sparse (only $LINES lines)"
+
+          # Prepend to CHANGELOG.md
+          HEADER="# Nasbeat Changelog\n\nAll notable changes to this project will be documented here.\n\n---\n"
+          EXISTING=""
+          [ -f CHANGELOG.md ] && EXISTING=$(grep -v "^# Nasbeat Changelog" CHANGELOG.md | sed '/^---$/,/^---$/d' | sed '1{/^$/d}') || true
+
+          {
+            printf '%b' "$HEADER"
+            cat /tmp/new_section.md
+            echo ""
+            echo "---"
+            echo ""
+            [ -n "$EXISTING" ] && echo "$EXISTING"
+          } > CHANGELOG.md
+
+          echo "✅ CHANGELOG.md updated ($(wc -l < CHANGELOG.md) lines)"
+
+      # ── Test: validate CHANGELOG.md is not empty ─────────────────
+      - name: Verify CHANGELOG.md
+        run: |
+          [ -f CHANGELOG.md ] && [ "$(wc -l < CHANGELOG.md)" -gt 5 ] && \
+            echo "✅ CHANGELOG.md OK" || { echo "❌ CHANGELOG.md missing or empty"; exit 1; }
+
+      - name: Commit CHANGELOG.md
+        run: |
+          git config user.name  "nasbeat-bot"
+          git config user.email "bot@nastechai.dev"
+          git add CHANGELOG.md
+          git diff --cached --quiet && echo "No changes." || {
+            git commit -m "docs(changelog): update for v${{ env.VERSION }} [skip ci]"
+            git push
+          }
+
+      - name: Summary
+        run: |
+          {
+            echo "# 📋 CHANGELOG Updated"
+            echo ""
+            echo "Version: **v${{ env.VERSION }}**"
+            echo ""
+            cat /tmp/new_section.md
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Trigger readme update ─────────────────────────────────
+      - name: Trigger update-readme
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner, repo: context.repo.repo,
+              workflow_id: 'update-readme.yml', ref: 'main',
+              inputs: { version: '${{ env.VERSION }}' },
+            });
