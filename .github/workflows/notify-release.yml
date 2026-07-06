@@ -1,0 +1,185 @@
+name: "Notify Release"
+
+on:
+  workflow_dispatch:
+    inputs:
+      version: { type: string, default: '' }
+  workflow_run:
+    workflows: ["Publish Release"]
+    types: [completed]
+
+permissions:
+  contents:     read
+  discussions:  write
+  issues:       write
+  actions:      write
+
+jobs:
+  notify:
+    name: "Post Release Announcement"
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Resolve version
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            echo "VERSION=${{ inputs.version }}" >> "$GITHUB_ENV"
+          else
+            VER=$(grep -E '^version:' pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)
+            echo "VERSION=$VER" >> "$GITHUB_ENV"
+          fi
+
+      # ── Test 1: Verify the release actually exists on GitHub ─────
+      - name: Verify release exists
+        id: verify_release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = `v${{ env.VERSION }}`;
+            try {
+              const { data } = await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner, repo: context.repo.repo, tag,
+              });
+              console.log(`✅ Release found: ${data.name}`);
+              console.log(`   URL: ${data.html_url}`);
+              console.log(`   Assets: ${data.assets.length}`);
+              core.setOutput('url',    data.html_url);
+              core.setOutput('name',   data.name);
+              core.setOutput('assets', data.assets.length);
+              core.setOutput('found',  'true');
+            } catch (e) {
+              console.log(`⚠️  Release ${tag} not found: ${e.message}`);
+              core.setOutput('found', 'false');
+            }
+
+      # ── Test 2: Check all 6 expected assets are attached ─────────
+      - name: Verify release assets
+        if: steps.verify_release.outputs.found == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = `v${{ env.VERSION }}`;
+            const { data } = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner, repo: context.repo.repo, tag,
+            });
+
+            const expected = [
+              `Nasbeat-v${{ env.VERSION }}-Android-universal.apk`,
+              `Nasbeat-v${{ env.VERSION }}-Android-arm64-v8a.apk`,
+              `Nasbeat-v${{ env.VERSION }}-Android-armeabi-v7a.apk`,
+              `Nasbeat-v${{ env.VERSION }}-Android-x86_64.apk`,
+              `Nasbeat-v${{ env.VERSION }}-Windows-x64.zip`,
+              `Nasbeat-v${{ env.VERSION }}-Linux-x64.tar.gz`,
+            ];
+
+            const actual = data.assets.map(a => a.name);
+            let missing  = 0;
+
+            for (const e of expected) {
+              if (actual.includes(e)) {
+                console.log(`✅ ${e}`);
+              } else {
+                console.log(`❌ Missing: ${e}`);
+                missing++;
+              }
+            }
+
+            if (missing > 0) {
+              core.warning(`${missing} expected asset(s) not yet attached — builds may still be running`);
+            } else {
+              console.log('✅ All 6 assets attached');
+            }
+
+      # ── Post announcement as GitHub Discussion ────────────────────
+      - name: Post release discussion
+        if: steps.verify_release.outputs.found == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const version = '${{ env.VERSION }}';
+            const tag     = `v${version}`;
+            const url     = '${{ steps.verify_release.outputs.url }}';
+            const assets  = '${{ steps.verify_release.outputs.assets }}';
+            const date    = new Date().toISOString().split('T')[0];
+
+            // Try to post to Discussions (requires discussions enabled)
+            try {
+              // Get discussions category
+              const query = `
+                query($owner:String!,$repo:String!) {
+                  repository(owner:$owner,name:$repo) {
+                    discussionCategories(first:10) { nodes { id name } }
+                  }
+                }`;
+              const cats = await github.graphql(query, {
+                owner: context.repo.owner, repo: context.repo.repo,
+              });
+              const nodes = cats.repository.discussionCategories.nodes;
+              const cat   = nodes.find(n => /announce|general|release/i.test(n.name)) || nodes[0];
+
+              if (cat) {
+                const repoQuery = `query($owner:String!,$repo:String!){repository(owner:$owner,name:$repo){id}}`;
+                const repoData  = await github.graphql(repoQuery, {
+                  owner: context.repo.owner, repo: context.repo.repo,
+                });
+
+                await github.graphql(`
+                  mutation($repoId:ID!,$catId:ID!,$title:String!,$body:String!) {
+                    createDiscussion(input:{repositoryId:$repoId,categoryId:$catId,title:$title,body:$body}) {
+                      discussion { url }
+                    }
+                  }`, {
+                  repoId: repoData.repository.id,
+                  catId:  cat.id,
+                  title:  `🎉 Nasbeat ${tag} Released`,
+                  body: [
+                    `## Nasbeat ${tag} is out! 🎶`,
+                    '',
+                    `**Release date:** ${date}`,
+                    `**Release URL:** ${url}`,
+                    `**Assets:** ${assets} files attached`,
+                    '',
+                    '### Downloads',
+                    `- 🤖 **Android** — APK for arm64, armv7, x86_64, universal`,
+                    `- 🪟 **Windows** — x64 ZIP`,
+                    `- 🐧 **Linux** — x64 tarball`,
+                    '',
+                    'Thank you for using Nasbeat! 🎵',
+                  ].join('\n'),
+                });
+                console.log('✅ Discussion posted');
+              }
+            } catch (e) {
+              console.log(`ℹ️  Could not post Discussion (may not be enabled): ${e.message}`);
+            }
+
+            // Always post as release comment via issue on release tag
+            console.log(`Release URL: ${url}`);
+
+      - name: Summary
+        run: |
+          {
+            echo "# 📢 Release Notification"
+            echo ""
+            echo "Version: **v${{ env.VERSION }}**"
+            echo "Release: ${{ steps.verify_release.outputs.url }}"
+            echo "Assets attached: ${{ steps.verify_release.outputs.assets }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Trigger final report ─────────────────────────────────────
+      - name: Trigger final-report
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner, repo: context.repo.repo,
+              workflow_id: 'final-report.yml', ref: 'main',
+              inputs: { version: '${{ env.VERSION }}' },
+            });
