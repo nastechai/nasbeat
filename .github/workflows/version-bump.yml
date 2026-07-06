@@ -1,0 +1,130 @@
+name: "Version Bump"
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        type: choice
+        default: patch
+        options: [patch, minor, major]
+      prerelease:
+        type: boolean
+        default: false
+  workflow_run:
+    workflows: ["Orchestrator"]
+    types: [completed]
+
+permissions:
+  contents: write
+  actions:  write
+
+jobs:
+  bump:
+    name: "Bump Version & Tag"
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    outputs:
+      version:    ${{ steps.compute.outputs.version }}
+      tag:        ${{ steps.compute.outputs.tag }}
+      prev_tag:   ${{ steps.compute.outputs.prev_tag }}
+      prerelease: ${{ steps.compute.outputs.prerelease }}
+
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── Compute next semver ─────────────────────────────────────
+      - name: Compute next version
+        id: compute
+        run: |
+          git fetch --tags --force
+          LATEST=$(git tag -l "v[0-9]*.[0-9]*.[0-9]*" | sort -V | tail -1)
+          if [ -z "$LATEST" ]; then
+            MAJOR=0; MINOR=0; PATCH=0; PREV=""
+          else
+            PREV="$LATEST"
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$(echo "$LATEST" | sed 's/^v//')"
+          fi
+          BUMP="${{ inputs.bump || 'patch' }}"
+          case "$BUMP" in
+            major) MAJOR=$((MAJOR+1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR+1)); PATCH=0 ;;
+            *)     PATCH=$((PATCH+1)) ;;
+          esac
+          NEW="${MAJOR}.${MINOR}.${PATCH}"
+          echo "version=$NEW"               >> "$GITHUB_OUTPUT"
+          echo "tag=v${NEW}"               >> "$GITHUB_OUTPUT"
+          echo "prev_tag=${PREV}"          >> "$GITHUB_OUTPUT"
+          echo "prerelease=${{ inputs.prerelease || 'false' }}" >> "$GITHUB_OUTPUT"
+          echo "Bumped: ${PREV:-none} → v${NEW}"
+
+      # ── Update pubspec.yaml ────────────────────────────────────
+      - name: Update pubspec.yaml
+        run: |
+          VER="${{ steps.compute.outputs.version }}"
+          sed -i "s/^version: .*/version: ${VER}+${{ github.run_number }}/" pubspec.yaml
+          grep '^version:' pubspec.yaml
+
+      # ── Test: pubspec version is valid semver ──────────────────
+      - name: Verify pubspec version format
+        run: |
+          VER=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)
+          if echo "$VER" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "✅ Version format OK: $VER"
+          else
+            echo "❌ Invalid version format: $VER"
+            exit 1
+          fi
+
+      # ── Commit & tag ───────────────────────────────────────────
+      - name: Commit version bump
+        run: |
+          git config user.name  "nasbeat-bot"
+          git config user.email "bot@nastechai.dev"
+          git add pubspec.yaml
+          git diff --cached --quiet && echo "Nothing to commit." || \
+            git commit -m "chore(release): v${{ steps.compute.outputs.version }} [skip ci]"
+          git push
+
+      - name: Create and push tag
+        run: |
+          TAG="${{ steps.compute.outputs.tag }}"
+          git rev-parse "$TAG" >/dev/null 2>&1 && echo "Tag $TAG exists." || {
+            git tag "$TAG"
+            git push origin "$TAG"
+            echo "✅ Tag $TAG pushed"
+          }
+
+      # ── Trigger parallel next jobs ─────────────────────────────
+      - name: Trigger parallel builds + code quality
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const VERSION  = '${{ steps.compute.outputs.version }}';
+            const PREREL   = '${{ steps.compute.outputs.prerelease }}';
+            const targets  = [
+              { id: 'build-android.yml',  inputs: { version: VERSION, prerelease: PREREL } },
+              { id: 'build-windows.yml',  inputs: { version: VERSION, prerelease: PREREL } },
+              { id: 'build-linux.yml',    inputs: { version: VERSION, prerelease: PREREL } },
+              { id: 'code-quality.yml',   inputs: {} },
+            ];
+            for (const t of targets) {
+              await github.rest.actions.createWorkflowDispatch({
+                owner: context.repo.owner, repo: context.repo.repo,
+                workflow_id: t.id, ref: 'main', inputs: t.inputs,
+              });
+              console.log(`Triggered: ${t.id}`);
+            }
+
+      - name: Summary
+        run: |
+          {
+            echo "# ✅ Version Bumped: ${{ steps.compute.outputs.tag }}"
+            echo ""
+            echo "Triggered: build-android, build-windows, build-linux, code-quality"
+          } >> "$GITHUB_STEP_SUMMARY"
