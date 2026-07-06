@@ -1,8 +1,5 @@
-<div align="center">
 
-<img src="./assets/docs/nasbeattunes_new_banner.png" alt="NasBeat Banner" width="100%">
-
-# 𒆜 NasBeat 
+                   𒆜 NasBeat 
 
 **A unified local and plugin-first streaming music player built with Flutter & Rust.**
 
